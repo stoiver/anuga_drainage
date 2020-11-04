@@ -29,7 +29,7 @@ import numpy as num
 
 length = 20.
 width = 4.
-dx = dy = 0.1 # .1           # Resolution: Length of subdivisions on both axes
+dx = dy = 0.2 # .1           # Resolution: Length of subdivisions on both axes
 
 points, vertices, boundary = rectangular_cross(int(length / dx), int(width / dy),
                                                len1=length, len2=width)
