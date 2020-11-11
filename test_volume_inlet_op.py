@@ -81,46 +81,9 @@ We would use this method to gain the boundary indices
 # polygon1 = [ [10.0, 0.0], [11.0, 0.0], [11.0, 5.0], [10.0, 5.0] ]
 # polygon2 = [ [10.0, 0.2], [11.0, 0.2], [11.0, 4.8], [10.0, 4.8] ]
 
-def get_cir(radius=None, center=None, domain=None, size=None, polygons=None):
-    if polygons is not None:
-        polygon1 = polygons[0]  # the larger one
-        polygon2 = polygons[1]
-        opp1 = Rate_operator(domain, polygon=polygon1)
-        opp2 = Rate_operator(domain, polygon=polygon2)
-        if isinstance(polygon1, Region):
-            opp1.region = polygon1
-        else:
-            opp1.region = Region(domain, poly=polygon1, expand_polygon=True)
-        if isinstance(polygon2, Region):
-            opp2.region = polygon2
-        else:
-            opp2.region = Region(domain, poly=polygon2, expand_polygon=True)
-
-    if radius is not None and center is not None:
-
-        region1 = Region(domain, radius=radius, center=center)
-        region2 = Region(domain, radius=radius - size, center=center)
-
-    if radius is None and center is None:
-        indices = [x for x in opp1.region.indices if x not in opp2.region.indices]
-    else:
-        indices = [x for x in region1.indices if x not in region2.indices]
-
-    return indices
 
 
-def get_depth(operator):
-    # FIXME: according to the index return the overland depth of specific area
 
-    # need check each triangle's area should be dx*dy/4
-    # here is the inlet depth
-    len_boud_pipe = len(operator.stage_c[:].take([get_cir(radius=0.5, center=(2.0, 2.0), domain=domain, size=0.0625)])[0])
-    overland_depth = sum(operator.stage_c[:].take([get_cir(radius=0.5, center=(2.0, 2.0), domain=domain, size=0.0625)])
-                         [0]-operator.elev_c[:].take([get_cir(radius=0.5, center=(2.0, 2.0), domain=domain, size=0.0625)])
-                         [0]) / len_boud_pipe
-    # the overland_depth should be got from ANUGA directly
-
-    return overland_depth
 
 # ------------------------------------------------------------------------------
 # Setup boundaries
@@ -183,71 +146,66 @@ previous_outlet_flow = 0.0
 
 
 domain.set_name("anuga_swmm")
+
 for t in domain.evolve(yieldstep=1.0, finaltime=60.0):
     print("\n")
     #print(f"coupling step: {t}")
     domain.print_timestepping_statistics()
-    if t < stop_release_water_time:
-        # assume we need to release the water into the domain for first two seconds
-        pass
-        #op_inlet.set_rate(flow)
-    else:
-        # set the overland_depth
-        # TODO: set up the overland depth, modify this function
+
+    # set the overland_depth
+    # TODO: set up the overland depth, modify this function
 
 
-        volumes = sim.coupling_step(1.0)
-        volumes_in_out = volumes[-1][-1]
+    volumes = sim.coupling_step(1.0)
+    volumes_in_out = volumes[-1][-1]
 
-        nodes[0].overland_depth = op_inlet.inlet.get_average_depth()
-        
-        #print('Inlet volumes', op_inlet.domain.fractional_step_volume_integral)
-        #print('Outlet volume', op_outlet.domain.fractional_step_volume_integral)
+    # FIXME SR: Shouldn't this go before calculating the coupling step.
+    # But that messes up the volume balance!
+    nodes[0].overland_depth = op_inlet.inlet.get_average_depth()
+    
+    #print('Inlet volumes', op_inlet.domain.fractional_step_volume_integral)
+    #print('Outlet volume', op_outlet.domain.fractional_step_volume_integral)
 
-        print("total volume: ",domain.get_water_volume() + Culvert.volume - nodes[0].overland_depth )
-        print("correct volume: ",initial_volume + t*0.25)
-        #print("calc volume: ",initial_volume + op_inlet.domain.fractional_step_volume_integral + Culvert.volume)
-        print('Loss', t*0.25 - op_inlet.domain.fractional_step_volume_integral + op_inlet.inlet.get_average_depth() - Culvert.volume )
-        #print('Loss', - previous_inlet_flow + previous_outlet_flow + op_inlet.inlet.get_average_depth() - Culvert.volume )
+    total_volume = domain.get_water_volume() + Culvert.volume + nodes[0].overland_depth
 
-        print('Culvert volume', Culvert.volume)
+    print("total volume: ", total_volume)
+    print("correct volume: ",initial_volume + t*0.25)
+    #print("calc volume: ",initial_volume + op_inlet.domain.fractional_step_volume_integral + Culvert.volume)
+    #print('Loss', t*0.25 - op_inlet.domain.fractional_step_volume_integral - nodes[0].overland_depth - Culvert.volume )
+    print('Loss', initial_volume + t*0.25 - total_volume)
 
-        print('Culvert Flow', Culvert.flow)
+    print('Culvert volume', Culvert.volume)
 
-        print("inlet overland depth: ", op_inlet.inlet.get_average_depth())
+    print('Culvert Flow', Culvert.flow)
 
-        print('Inlet inflow', nodes[0].total_inflow)
-        print('Inlet ourflow', nodes[0].total_inflow)
-        print('Outlet inflow', nodes[1].total_inflow)
-        print('Outlet ourflow', nodes[1].total_inflow)
+    print("inlet overland depth: ", op_inlet.inlet.get_average_depth())
 
-        #print(volumes)
+    print('Inlet inflow', nodes[0].total_inflow)
+    print('Inlet ourflow', nodes[0].total_inflow)
+    print('Outlet inflow', nodes[1].total_inflow)
+    print('Outlet ourflow', nodes[1].total_inflow)
 
+    #print ("node area", nodes[0].coupling_area)
+    #print ("node inflow", nodes[0].coupling_inflow)
+    #print ("node volume", nodes[0].volume)
+    #print("node stuff", nodes[0].statistics)
 
-        
-        #print(volumes_in_out)
-
-        if t <= stop_release_water_time+1:
-            # no water exchange as the first two steps from swmm and anuga did not match.
-            print("Volume total at node Inlet" ":", volumes_in_out["Inlet"])
-            print("Outlet: ", nodes[1].total_inflow)
-            op_inlet.set_Q(0)
-            op_outlet.set_Q(0)
-        else:
-            #Ming's code
-            print("Volume total at node Inlet" ":", volumes_in_out["Inlet"])
-            print("Volume total at node Outlet" ":", volumes_in_out["Outlet"])
-            print("Outlet: ", nodes[1].total_inflow)
-            #op_inlet.set_Q(-1 * volumes_in_out['Inlet'])
-
-            op_inlet.set_Q(-nodes[0].total_inflow)
-            op_outlet.set_Q(nodes[1].total_inflow)
+    #print(volumes)
 
 
-            previous_inlet_flow = nodes[0].total_inflow #volumes_in_out['Inlet']
-            previous_outlet_flow = nodes[1].total_inflow
+    
+    #print(volumes_in_out)
 
-            # op_outlet.set_rate(nodes[1].total_inflow)
-            # Q = 5
-            # fid = op1.full_indices
-            # rate = Q / num.sum(op1.areas[fid])
+    print("Volume total at node Inlet" ":", volumes_in_out["Inlet"])
+    print("Volume total at node Outlet" ":", volumes_in_out["Outlet"])
+    print("Outlet: ", nodes[1].total_inflow)
+    op_inlet.set_Q(-1 * volumes_in_out['Inlet'])
+
+    #op_inlet.set_Q(-nodes[0].total_inflow)
+    op_outlet.set_Q(nodes[1].total_inflow)
+
+
+
+    previous_inlet_flow = nodes[0].total_inflow #volumes_in_out['Inlet']
+    previous_outlet_flow = nodes[1].total_inflow
+
