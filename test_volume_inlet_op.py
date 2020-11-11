@@ -142,8 +142,8 @@ region_input = Region(domain, radius=1.0, center=(2., 2.))
 
 op_input = Inlet_operator(domain, region_input, Q=0.25)
 
-op_inlet = Inlet_operator(domain, region_inlet, Q=0.0)
-op_outlet = Inlet_operator(domain, region_outlet, Q=0.0)  #
+op_inlet = Inlet_operator(domain, region_inlet, Q=0.0, zero_velocity=True)
+op_outlet = Inlet_operator(domain, region_outlet, Q=0.0, zero_velocity=False)  #
 
 x = domain.centroid_coordinates[:,0]
 indices = num.where(x < 10)
@@ -160,19 +160,27 @@ link_names = ['Culvert']
 nodes = [Nodes(sim)[names] for names in node_names]
 links = [Links(sim)[names] for names in link_names]
 
+
+Culvert = Links(sim)['Culvert']
+
 # type, area, length, orifice_coeff, free_weir_coeff, submerged_weir_coeff
-nodes[0].create_opening(4, 0.25, 1.0, 0.6, 1.6, 1.0)
+nodes[0].create_opening(4, 1.0, 1.0, 0.6, 1.6, 1.0)
 nodes[0].coupling_area = 0.25
 
 # TODO: setup the outlet node
-#nodes[1].create_opening(4, 1.0, 1.0, 0.6, 1.6, 1.0)
+nodes[1].create_opening(4, 1.0, 1.0, 0.6, 1.6, 1.0)
+nodes[1].coupling_area = 0.25
 
 print('')
 print("node0_is_open?:", nodes[0].is_coupled)
 print("node1_is_open?:", nodes[1].is_coupled)
 
 flow = 1.0
-stop_release_water_time = 2 # the time for stopping releasing the water
+stop_release_water_time = 0 # the time for stopping releasing the water
+initial_volume = domain.get_water_volume()
+previous_inlet_flow = 0.0
+previous_outlet_flow = 0.0
+
 
 domain.set_name("anuga_swmm")
 for t in domain.evolve(yieldstep=1.0, finaltime=60.0):
@@ -187,29 +195,57 @@ for t in domain.evolve(yieldstep=1.0, finaltime=60.0):
         # set the overland_depth
         # TODO: set up the overland depth, modify this function
 
-        print("total volume: ",domain.get_water_volume())
-        volumes = sim.coupling_step(1.0)
 
-        print(volumes)
+        volumes = sim.coupling_step(1.0)
+        volumes_in_out = volumes[-1][-1]
 
         nodes[0].overland_depth = op_inlet.inlet.get_average_depth()
+        
+        #print('Inlet volumes', op_inlet.domain.fractional_step_volume_integral)
+        #print('Outlet volume', op_outlet.domain.fractional_step_volume_integral)
+
+        print("total volume: ",domain.get_water_volume() + Culvert.volume - nodes[0].overland_depth )
+        print("correct volume: ",initial_volume + t*0.25)
+        #print("calc volume: ",initial_volume + op_inlet.domain.fractional_step_volume_integral + Culvert.volume)
+        print('Loss', t*0.25 - op_inlet.domain.fractional_step_volume_integral + op_inlet.inlet.get_average_depth() - Culvert.volume )
+        #print('Loss', - previous_inlet_flow + previous_outlet_flow + op_inlet.inlet.get_average_depth() - Culvert.volume )
+
+        print('Culvert volume', Culvert.volume)
+
+        print('Culvert Flow', Culvert.flow)
+
         print("inlet overland depth: ", op_inlet.inlet.get_average_depth())
-        volumes_in_out = volumes[-1][-1]
-        print(volumes_in_out)
+
+        print('Inlet inflow', nodes[0].total_inflow)
+        print('Inlet ourflow', nodes[0].total_inflow)
+        print('Outlet inflow', nodes[1].total_inflow)
+        print('Outlet ourflow', nodes[1].total_inflow)
+
+        #print(volumes)
+
+
+        
+        #print(volumes_in_out)
 
         if t <= stop_release_water_time+1:
             # no water exchange as the first two steps from swmm and anuga did not match.
             print("Volume total at node Inlet" ":", volumes_in_out["Inlet"])
-            print("Oulet: ", nodes[1].total_inflow)
+            print("Outlet: ", nodes[1].total_inflow)
             op_inlet.set_Q(0)
             op_outlet.set_Q(0)
         else:
             #Ming's code
             print("Volume total at node Inlet" ":", volumes_in_out["Inlet"])
-            print("Oulet: ", nodes[1].total_inflow)
-            op_inlet.set_Q(-1 * volumes_in_out['Inlet'])
-            Q = nodes[1].total_inflow
-            op_outlet.set_Q(Q)
+            print("Volume total at node Outlet" ":", volumes_in_out["Outlet"])
+            print("Outlet: ", nodes[1].total_inflow)
+            #op_inlet.set_Q(-1 * volumes_in_out['Inlet'])
+
+            op_inlet.set_Q(-nodes[0].total_inflow)
+            op_outlet.set_Q(nodes[1].total_inflow)
+
+
+            previous_inlet_flow = nodes[0].total_inflow #volumes_in_out['Inlet']
+            previous_outlet_flow = nodes[1].total_inflow
 
             # op_outlet.set_rate(nodes[1].total_inflow)
             # Q = 5
