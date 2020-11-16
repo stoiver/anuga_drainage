@@ -124,25 +124,34 @@ nodes = [Nodes(sim)[names] for names in node_names]
 links = [Links(sim)[names] for names in link_names]
 
 
-Culvert = Links(sim)['Culvert']
-
-# type, area, length, orifice_coeff, free_weir_coeff, submerged_weir_coeff
-nodes[0].create_opening(4, 1.0, 1.0, 0.6, 1.6, 1.0)
-nodes[0].coupling_area = 0.25
-
-# TODO: setup the outlet node
-nodes[1].create_opening(4, 1.0, 1.0, 0.6, 1.6, 1.0)
-nodes[1].coupling_area = 0.25
+culvert = Links(sim)['Culvert']
+inlet   = Nodes(sim)['Inlet']
+outlet  = Nodes(sim)['Outlet']
 
 print('')
-print("node0_is_open?:", nodes[0].is_coupled)
-print("node1_is_open?:", nodes[1].is_coupled)
+
+# type, area, length, orifice_coeff, free_weir_coeff, submerged_weir_coeff
+inlet_opening = inlet.create_opening(4, 2.0, 1.0, 0.6, 1.6, 1.0)
+inlet.coupling_area = 0.5
+print('inlet_opening',inlet_opening)
+
+# TODO: setup the outlet node
+#outlet.create_opening(4, 1.0, 1.0, 0.6, 1.6, 1.0)
+#outlet.coupling_area = 1.0
+
+
+print("inlet_is_open?:", inlet.is_coupled)
+print("outlet_is_open?:", outlet.is_coupled)
 
 flow = 1.0
 stop_release_water_time = 0 # the time for stopping releasing the water
 initial_volume = domain.get_water_volume()
-previous_inlet_flow = 0.0
-previous_outlet_flow = 0.0
+inlet_flow = 0.0
+outlet_flow = 0.0
+inlet_residual = 0.0
+inlet_discrepency = 0.0
+
+previous_culvert_volume = 0.0
 
 
 domain.set_name("anuga_swmm")
@@ -152,62 +161,93 @@ for t in domain.evolve(yieldstep=1.0, finaltime=120.0):
     #print(f"coupling step: {t}")
     domain.print_timestepping_statistics()
 
-    # set the overland_depth
-    # TODO: set up the overland depth, modify this function
+    print('culvert volume', culvert.volume)
+    # FIXME SR: Don't know why including inlet.depth seems to reconcile the volumes
+    # Note that including inlet.coupling_area doesnt seem to work
+    total_volume = domain.get_water_volume() + culvert.volume - inlet.depth
+    print("total volume: ", total_volume)
+    print("correct volume: ",initial_volume + t*0.25)
+    print("domain volume: ",domain.get_water_volume())
+    
+    print('Discrepancy', initial_volume + t*0.25 - total_volume)
+
+    print('cum inlet_flow',inlet_flow)
+    print('cum outlet_flow',outlet_flow)
+    print('cum pipe flow', inlet_flow + outlet_flow)
+    #print("inlet_discrepency",inlet_discrepency)
+
+
+
+    previous_culvert_volume = culvert.volume
+
+    #print("culvert depth",culvert.depth)
+
+
+
+
+    #print('Outlet outflow', outlet.total_outflow)
+
+    #print('Inlet coupling inflow', inlet.coupling_inflow)
+
+
+    print(20*'=')
+    print("Flows for next timestep")
+    print(20*'=')
+
+    # Setup inlet for SWMM step
+    inlet.overland_depth = op_inlet.inlet.get_average_depth()
+    print("inlet overland depth: ", inlet.overland_depth)
     
 
     volumes = sim.coupling_step(1.0)
     volumes_in_out = volumes[-1][-1]
 
-    # FIXME SR: Shouldn't this go before calculating the coupling step.
-    # But that messes up the volume balance!
-    nodes[0].overland_depth = op_inlet.inlet.get_average_depth()
-    
+
     #print('Inlet volumes', op_inlet.domain.fractional_step_volume_integral)
     #print('Outlet volume', op_outlet.domain.fractional_step_volume_integral)
 
-    total_volume = domain.get_water_volume() + Culvert.volume + nodes[0].overland_depth
+    
 
-    print("total volume: ", total_volume)
-    print("correct volume: ",initial_volume + t*0.25)
-    #print("calc volume: ",initial_volume + op_inlet.domain.fractional_step_volume_integral + Culvert.volume)
-    #print('Loss', t*0.25 - op_inlet.domain.fractional_step_volume_integral - nodes[0].overland_depth - Culvert.volume )
-    print('Loss', initial_volume + t*0.25 - total_volume)
 
-    print('Culvert volume', Culvert.volume)
 
-    print('Culvert Flow', Culvert.flow)
 
-    print("inlet overland depth: ", nodes[0].overland_depth)
-
-    print('Inlet inflow', nodes[0].total_inflow)
-    print('Inlet ourflow', nodes[0].total_outflow)
-    print('Outlet inflow', nodes[1].total_inflow)
-    print('Outlet outflow', nodes[1].total_outflow)
-
-    #print ("node area", nodes[0].coupling_area)
-    #print ("node inflow", nodes[0].coupling_inflow)
-    #print ("node volume", nodes[0].volume)
+    #print ("node area", inlet.coupling_area)
+    #print ("node inflow", inlet.coupling_inflow)
+    #print ("node volume", inlet.volume)
     #print("node stuff", nodes[0].statistics)
 
     #print(volumes)
 
-
+    print('Culvert volume', culvert.volume)
+    #print('Change in culvert volume',culvert.volume-previous_culvert_volume)
+    print('Culvert Flow', culvert.flow)
+    print('Inlet inflow', inlet.total_inflow)
+    #print('Inlet ourflow', inlet.total_outflow)
+    #inlet_residual = inlet.total_inflow - inlet.total_outflow
+    #print('inlet_residual',inlet_residual)
+    print('Outlet inflow', outlet.total_inflow)
     
     #print(volumes_in_out)
 
-    print("Volume total at node Inlet" ":", volumes_in_out["Inlet"])
-    print("Volume total at node Outlet" ":", volumes_in_out["Outlet"])
-    print("Outlet: ", nodes[1].total_inflow)
-    op_inlet.set_Q(-volumes_in_out['Inlet'])
-
-    #op_inlet.set_Q(-nodes[0].total_inflow)
-    op_outlet.set_Q(nodes[1].total_inflow)
-
-    
+    #print("Volume total at node Inlet" ":", volumes_in_out["Inlet"])
+    #print("Volume total at node Outlet" ":", volumes_in_out["Outlet"])
 
 
+    #inlet_Q  = -volumes_in_out['Inlet']
+    #inlet_Q = - inlet.coupling_inflow
+    inlet_Q = - inlet.total_inflow
+    outlet_Q = outlet.total_inflow
 
-    previous_inlet_flow = nodes[0].total_inflow #volumes_in_out['Inlet']
-    previous_outlet_flow = nodes[1].total_inflow
+    op_inlet.set_Q(inlet_Q)
+    op_outlet.set_Q(outlet_Q)
+
+    inlet_flow = inlet_flow + inlet_Q
+    outlet_flow = outlet_flow + outlet_Q
+
+    #inlet_discrepency = inlet.total_inflow + inlet_Q
+
+    #print("inlet_discrepency",inlet_discrepency)
+
+    previous_inlet_flow = inlet.total_inflow #volumes_in_out['Inlet']
+    previous_outlet_flow = outlet.total_inflow
 
