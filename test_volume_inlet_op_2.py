@@ -156,18 +156,23 @@ previous_culvert_volume = 0.0
 
 domain.set_name("anuga_swmm")
 
-for t in domain.evolve(yieldstep=1.0, finaltime=120.0):
+for t in domain.evolve(yieldstep=1.0, finaltime=60.0):
     print("\n")
     #print(f"coupling step: {t}")
+    print(80*'=')
     domain.print_timestepping_statistics()
+    print(80*'=')
 
-    print('culvert volume', culvert.volume)
+    
     # FIXME SR: Don't know why including inlet.depth seems to reconcile the volumes
     # Note that including inlet.coupling_area doesnt seem to work
     total_volume = domain.get_water_volume() + culvert.volume - inlet.depth
     print("total volume: ", total_volume)
     print("correct volume: ",initial_volume + t*0.25)
+
+    print("inlet.depth",inlet.depth)
     print("domain volume: ",domain.get_water_volume())
+    print('culvert volume', culvert.volume)
     
     print('Discrepancy', initial_volume + t*0.25 - total_volume)
 
@@ -190,9 +195,9 @@ for t in domain.evolve(yieldstep=1.0, finaltime=120.0):
     #print('Inlet coupling inflow', inlet.coupling_inflow)
 
 
-    print(20*'=')
+    print(24*'-')
     print("Flows for next timestep")
-    print(20*'=')
+    print(24*'-')
 
     # Setup inlet for SWMM step
     inlet.overland_depth = op_inlet.inlet.get_average_depth()
@@ -201,6 +206,8 @@ for t in domain.evolve(yieldstep=1.0, finaltime=120.0):
 
     volumes = sim.coupling_step(1.0)
     volumes_in_out = volumes[-1][-1]
+
+    print(volumes)
 
 
     #print('Inlet volumes', op_inlet.domain.fractional_step_volume_integral)
