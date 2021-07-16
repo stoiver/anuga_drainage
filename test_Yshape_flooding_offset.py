@@ -227,9 +227,9 @@ for t in domain.evolve(yieldstep=1.0, finaltime=100.0):
 
 
 
-"""
-visualize the loss curve
-"""
+
+print('visualize the loss curve')
+
 t = int(t)
 import matplotlib.pyplot as plt
 plt.subplot(2, 2, 1)
