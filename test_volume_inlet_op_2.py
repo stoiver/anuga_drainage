@@ -18,7 +18,7 @@ from anuga import Reflective_boundary
 from anuga import Rate_operator
 from anuga import Inlet_operator
 from anuga import Region
-from anuga import rectangular_cross
+from anuga import rectangular_cross_domain
 
 import anuga
 import numpy as num
@@ -31,9 +31,8 @@ length = 20.
 width = 4.
 dx = dy = 0.2 # .1           # Resolution: Length of subdivisions on both axes
 
-points, vertices, boundary = rectangular_cross(int(length / dx), int(width / dy),
+domain = rectangular_cross_domain(int(length / dx), int(width / dy),
                                                len1=length, len2=width)
-domain = Domain(points, vertices, boundary)
 domain.set_name('total_volume_testing')  # Output name based on script name. You can add timestamp=True
 print(domain.statistics())
 
