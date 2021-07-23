@@ -1,0 +1,239 @@
+GLOBAL_MAPPER_SCRIPT VERSION="1.00" FILENAME="E:\home\dpm\Downloads\anuga-pipedream-link\Strathhearn_pipedream\project.gmw" \
+	 GM_VERSION="18.0.0" TIMESTAMP="2021-07-21T21:18:26Z"
+SET_BG_COLOR COLOR="RGB(255,255,255)"
+UNLOAD_ALL
+DEFINE_PROJ PROJ_NAME="MGA_ZONE56_GDA_94_AUSTRALIAN_GEODETIC_1994"
+Projection     MGA (Map Grid of Australia)
+Datum          GDA94
+Zunits         NO
+Units          METERS
+Zone           56
+Xshift         0.000000
+Yshift         0.000000
+Parameters
+END_DEFINE_PROJ
+IMPORT_ASCII FILENAME="E:\home\dpm\Downloads\anuga-pipedream-link\Strathhearn_pipedream\terrain.csv" \
+	 PROJ_NAME="MGA_ZONE56_GDA_94_AUSTRALIAN_GEODETIC_1994" TYPE="ELEVATION" COORD_DELIM="AUTO" \
+	 COORD_FORMAT="DECIMAL" COORD_ORDER="X_FIRST" INC_COORD_LINE_ATTRS="NO" COL_HEADERS="NO" \
+	 INC_ELEV_COORDS="YES" CREATE_AREAS_FROM_LINES="NO" GRID_FILL_TO_BOUNDS="NO" GRID_IGNORE_ZERO="NO" \
+	 NO_DATA_DIST_MULT="0.00" GRID_ALG="TIN" SKIP_COLUMNS="0" SKIP_ROWS="0" LINE_TYPE="Unclassified Line Feature" \
+	 LABEL_FIELD_FORCE_OVERWRITE="NO" CLIP_COLLAR="NONE" SAMPLING_METHOD="BILINEAR" ELEV_UNITS="METERS"
+
+/************ DEFINE LAYER STYLE *************/
+DEFINE_LAYER_STYLE NAME="LINE_STYLE" TYPE="LINE"
+LayerStyle=1
+Type=1
+LineStyleForAll=16711683,2097152,0.0
+FontForAll=~0~534799372~0.000~0~0~16777215
+END_DEFINE_LAYER_STYLE
+
+
+/************ DEFINE LAYER STYLE *************/
+DEFINE_LAYER_STYLE NAME="POINT_STYLE" TYPE="POINT"
+LayerStyle=1
+Type=2
+PointStyleForAll=Dot - Blue@SCALE=4
+FontForAll=~0~534799372~0.000~0~0~16777215
+END_DEFINE_LAYER_STYLE
+
+EMBED_OVERLAY DATA_SIZE="1737" LAYER_DESC="pits" ELEV_UNITS="METERS" LABEL_FIELD_FORCE_OVERWRITE="NO" \
+	 LINE_STYLE_NAME="LINE_STYLE" POINT_STYLE_NAME="POINT_STYLE" CLIP_COLLAR="NONE"
+M?`$!`!`!``!\`0``!0```($!``"X````.0(``&,!``"<`P``*````!0```#$
+M`P``+````"P```#P`P``#`````P```#\`P``#`````P````(!```#`````P`
+M```4!```V0```.T$```X`0``)08``*0`````````````````````````````
+M``````````````````````````````````````````````````#)!@``````
+M````````````````````````````````````````````````````````````
+M````````````````````````````````````````````````````````````
+M````````````````````````````````````````````````R08`````````
+M`````````,D&`````````````````````````````/_____)!@``````````
+M``#)!@``````````````````(P!P:71S`%!R;VIE8W1I;VX@("`@($U'02`H
+M36%P($=R:60@;V8@075S=')A;&EA*0I$871U;2`@("`@("`@("!'1$$Y-`I:
+M=6YI=',@("`@("`@("!-151%4@I5;FET<R`@("`@("`@("!-151%4E,*6F]N
+M92`@("`@("`@("`@-38*6'-H:69T("`@("`@("`@,"XP,#`P,#`*67-H:69T
+M("`@("`@("`@,"XP,#`P,#`*4&%R86UE=&5R<P``,"XP,#(P-C8@<W$@:VT`
+M,3`N,C4Q(&T`,30N,CDU(&T`,30PL"`Q."<@-#,N,B(`,3DW+C$W(&T`,C,N
+M.3@S(&T`,C2P(#(S)R`W+C<B`#,Q+CDY-R!M`#,T+C,Y,R!M`#,U+C4S,2!M
+M`#,W+C0S,B!M`#,X+C4R.2!M`#<N-#0S(&T`-S2P(#`R)R`T-2XY(@`X,+`@
+M-#8G(#(X+C$B`$)%05))3D<`1&]T`$1O="`M($)L=65`4T-!3$4]-`!%3$56
+M051)3TX`14Y#3$]3141?05)%00!,14Y'5$@`4$5224U%5$52`%5N:VYO=VX@
+M07)E82!4>7!E`%5N:VYO=VX@3&EN92!4>7!E`%5N:VYO=VX@4&]I;G0@1F5A
+M='5R90!^,'XU,S0W.3DS-S)^,"XP,#!^,'XP?C$V-S<W,C$U`'XP?C4S-#@W
+M-C$W,'XP+C`P,'XP?C!^,38W-S<R,34``0``````(``````````````````#
+M`/\````@``````````````````$```!````````@````````````````````
+M````````````````````````Z0`````````C`0``^P````````!#`0``#0$`
+M`*D````C`0``V0``F0```@#?`#$`R@`!``P```!NS*2V5Z@20:K*X=+[FE=!
+M4'J*O7:H$D%$>"CP_)I702.]-/3DJ!)!D>2C2/^:5T&^49!L^J@206R3=]H"
+MFU=!F'2,"#6I$D$@3$R1`9M70:Y"UG#[J!)!X??/>/6:5T':86RTD:@200V2
+M>BKQFE=!#S?5(W>H$D&JV_/\\II70?F&=7IOJ!)!B=;<4/2:5T%`Z_(M<:@2
+M04X+*S+UFE=!\`'9H&*H$D'QK*8*^9I706[,I+97J!)!JLKATON:5T$0````
+M`%@`@-D```(`V`!]`*$`(@`#````ZT>M#XJH$D%+<'4H^9I70>3HPHR=J!)!
+MJ(Q(P/>:5T'DZ,*,G:@20:B,2,#WFE=!(P$#`P```+(=&D)>NA5"7KH50@%8
+M`(#9```"`-@`$`"A`(4``P```.3HPHR=J!)!J(Q(P/>:5T&O%HJ[Q*@209]O
+MOX'XFE=!KQ:*N\2H$D&?;[^!^)I702,!`P,```!>NA5"OA\.0KX?#D(!1`"`
+MV0```@#8`!D`H0"3``(```"O%HJ[Q*@209]OOX'XFE=!3,N%^?RH$D%V]T`G
+M^9I702,!`P(```"^'PY";Y()0@%$`(#9```"`-@`.@"A`$,``@```$S+A?G\
+MJ!)!=O=`)_F:5T&5L97`(JD203:(.:K^FE=!(P$#`@```&^2"4+;^?]!`1P`
+M`!D```$`P`!K`.3HPHR=J!)!J(Q(P/>:5T$<```9```!`,``60!,RX7Y_*@2
+M07;W0"?YFE=!'```&0```0#``%``E;&5P"*I$D$VB#FJ_II701P``!D```$`
+MP`!T`.M'K0^*J!)!2W!U*/F:5T$<```9```!`,``8@"O%HJ[Q*@209]OOX'X
+;FE=!&```$P``K0!(J9OP<Z@20:$M^:/[FE=!
+`
+end
+EMBED_OVERLAY DATA_SIZE="1118" ELEV_UNITS="METERS" LABEL_FIELD_FORCE_OVERWRITE="NO" \
+	 CLIP_COLLAR="NONE"
+M?`$!`!`!``!\`0``!@```((!``"X````.@(``,,```#]`@``*````!0````E
+M`P```````"P````E`P````````P````E`P``#`````P````Q`P````````P`
+M```Q`P```````#$#```M`0``7@0`````````````````````````````````
+M``````````````````````````````````````````````````!>!```````
+M````````````````````````````````````````````````````````````
+M````````````````````````````````````````````````````````````
+M````````````````````````````````````````````````7@0`````````
+M`````````%X$`````````````````````````````/____]>!```````````
+M``!>!```````````````````(P!P:7!E<P!0<F]J96-T:6]N("`@("!-1T$@
+M*$UA<"!'<FED(&]F($%U<W1R86QI82D*1&%T=6T@("`@("`@("`@1T1!.30*
+M6G5N:71S("`@("`@("`@345415(*56YI=',@("`@("`@("`@345415)3"EIO
+M;F4@("`@("`@("`@(#4V"EAS:&EF="`@("`@("`@(#`N,#`P,#`P"EES:&EF
+M="`@("`@("`@(#`N,#`P,#`P"E!A<F%M971E<G,``#$P+C(U,2!M`#$T+C(Y
+M-2!M`#$T,+`@,3@G(#0S+C(B`#(S+CDX,R!M`#(TL"`R,R<@-RXW(@`W+C0T
+M,R!M`#<TL"`P,B<@-#4N.2(`.#"P(#0V)R`R."XQ(@!"14%224Y'`$Q%3D=4
+M2`!5;FMN;W=N($QI;F4@5'EP90!P:7!E<P!^,'XU,S0W.3DS-S)^,"XP,#!^
+M,'XP?C$V-S<W,C$U`'XP?C4S-#@W-C$W,'XP+C`P,'XP?C!^,38W-S<R,34`
+M`0``````(``````````````````#`/\````@`````````````````&L`````
+M````HP```%8``-\```$`?0(`9#A<$P,```#K1ZT/BJ@204MP=2CYFE=!Y.C"
+MC)VH$D&HC$C`]YI70>3HPHR=J!)!J(Q(P/>:5T&#`P,```"R'1I"7KH50EZZ
+M%4(!50``VP```0`"`&0!7$`#````Y.C"C)VH$D&HC$C`]YI70:\6BKO$J!)!
+MGV^_@?B:5T&O%HJ[Q*@209]OOX'XFE=!@P,#````7KH50KX?#D*^'PY"`4$`
+M`-L```$``@!D"EQ.`@```*\6BKO$J!)!GV^_@?B:5T%,RX7Y_*@207;W0"?Y
+MFE=!@P,"````OA\.0F^2"4(!00``VP```0`"`&0B7"L"````3,N%^?RH$D%V
+F]T`G^9I7096QE<`BJ1)!-H@YJOZ:5T&#`P(```!OD@E"V_G_00$`
+`
+end
+LOAD_PROJECTION PROJ_NAME="MGA_ZONE56_GDA_94_AUSTRALIAN_GEODETIC_1994"
+SET_VIEW GLOBAL_BOUNDS="305671.697,6187982.011,305757.219,6188032.726"
+SET_VERT_DISP_OPTS SHADER_NAME="Atlas Shader" AMBIENT_LIGHT_LEVEL="0.0000000000" VERT_EXAG="3.0000000" \
+	 LIGHT_ALTITUDE="45.000000" LIGHT_AZIMUTH="45.000000" LIGHT_NUM_SOURCES="1" LIGHT_BLENDING_ALGORITHM="0" \
+	 SLOPE_ALGORITHM="0" ENABLE_HILL_SHADING="YES" SHADE_DARKNESS="0" SHADE_HIGHLIGHT="0" \
+	 ENABLE_WATER="NO" WATER_ALPHA="128" WATER_LEVEL="0.0000000000" WATER_COLOR="RGB(0,0,255)"
+
+/************ DEFINE MAP LAYOUT *************/
+MAP_LAYOUT
+ElevLegendBgColor=16777215
+ElevLegendTranslucency=384
+ElevLegendFont=~0~534799372~0.000~0~0~16777215
+ElevLegendVisible=1
+ElevLegendDisplayType=1
+ElevLegendDisplayUnits=1
+ElevLegendDisplayUnitsStr=
+ElevLegendCustomRangeMin=0
+ElevLegendCustomRangeMax=0
+ElevLegendRangeType=0
+ElevLegendTitle=
+ElevLegendSlopePercent=0
+
+DEFINE_PROJ_ELEV_LEGEND
+Projection     Fixed Screen Position
+Datum          D_ADINDAN
+Zunits         NO
+Units          RADIAN
+Xshift         0.000000
+Yshift         0.000000
+Parameters
+0.000000000 /* horz offset
+0.000000000 /* horz offset type (0 - left, 1 - right, 2 - center)
+0.000000000 /* horz offset value type (0 - inches, 1 - % width, 2 - deg lon)
+0.000000000 /* vert offset
+0.000000000 /* vert offset type (0 - top, 1 - bottom, 2 - center)
+0.000000000 /* vert offset value type (0 - inches, 1 - % width, 2 - deg lat)
+100.000000000 /* size value
+2.000000000 /* size value type (0 - % width, 1 - % height, 2 - pixel)
+1.000000000 /* always on top
+0.000000000 /* shrink to fit
+END_DEFINE_PROJ
+
+MapLegendType=0
+MapLegendBgColor=16776959
+MapLegendBorderStyle=0,2097152,0.0
+MapLegendTranslucency=512
+MapLegendFont=~0~534799368~0.000~0~0~16777215
+MapLegendFooterFont=~0~534799372~0.000~0~0~16777215
+MapLegendHeaderFont=~0~534799372~0.000~0~0~16777215
+MapLegendHeader=
+MapLegendFooter=
+MapLegendNumColumns=1
+MapLegendLabelAttr=
+
+DEFINE_PROJ_MAP_LEGEND
+Projection     Fixed Screen Position
+Datum          D_ADINDAN
+Zunits         NO
+Units          RADIAN
+Xshift         0.000000
+Yshift         0.000000
+Parameters
+0.000000000 /* horz offset
+1.000000000 /* horz offset type (0 - left, 1 - right, 2 - center)
+0.000000000 /* horz offset value type (0 - inches, 1 - % width, 2 - deg lon)
+0.000000000 /* vert offset
+1.000000000 /* vert offset type (0 - top, 1 - bottom, 2 - center)
+0.000000000 /* vert offset value type (0 - inches, 1 - % width, 2 - deg lat)
+0.000000000 /* size value
+2.000000000 /* size value type (0 - % width, 1 - % height, 2 - pixel)
+1.000000000 /* always on top
+1.000000000 /* shrink to fit
+END_DEFINE_PROJ
+
+NorthArrowEnabled=0
+NorthArrowSymbol=
+NorthArrowSymbolScale=1.000000
+NorthArrowTranslucency=384
+
+DEFINE_PROJ_NORTH_ARROW
+Projection     Fixed Screen Position
+Datum          D_ADINDAN
+Zunits         NO
+Units          RADIAN
+Xshift         0.000000
+Yshift         0.000000
+Parameters
+0.000000000 /* horz offset
+1.000000000 /* horz offset type (0 - left, 1 - right, 2 - center)
+0.000000000 /* horz offset value type (0 - inches, 1 - % width, 2 - deg lon)
+0.000000000 /* vert offset
+0.000000000 /* vert offset type (0 - top, 1 - bottom, 2 - center)
+0.000000000 /* vert offset value type (0 - inches, 1 - % width, 2 - deg lat)
+100.000000000 /* size value
+2.000000000 /* size value type (0 - % width, 1 - % height, 2 - pixel)
+1.000000000 /* always on top
+0.000000000 /* shrink to fit
+END_DEFINE_PROJ
+
+ScaleBarBgColor=16777215
+ScaleBarTranslucency=384
+ScaleBarFont=~0~534799372~0.000~0~0~16777215
+ScaleVisible=1
+
+DEFINE_PROJ_SCALE
+Projection     Fixed Screen Position
+Datum          D_ADINDAN
+Zunits         NO
+Units          RADIAN
+Xshift         0.000000
+Yshift         0.000000
+Parameters
+0.000000000 /* horz offset
+0.000000000 /* horz offset type (0 - left, 1 - right, 2 - center)
+0.000000000 /* horz offset value type (0 - inches, 1 - % width, 2 - deg lon)
+0.000000000 /* vert offset
+1.000000000 /* vert offset type (0 - top, 1 - bottom, 2 - center)
+0.000000000 /* vert offset value type (0 - inches, 1 - % width, 2 - deg lat)
+0.000000000 /* size value
+2.000000000 /* size value type (0 - % width, 1 - % height, 2 - pixel)
+1.000000000 /* always on top
+0.000000000 /* shrink to fit
+END_DEFINE_PROJ
+
+GridDisplayType=0
+GridDisplayShowAll=0
+GridSpacingLatLon=0.00000000000000000
+GridSpacingProjected=0.00000000000000000
+END_MAP_LAYOUT
