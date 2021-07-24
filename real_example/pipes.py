@@ -3,13 +3,12 @@
 #------------------------------------------------------------------------------
 print (' ABOUT to Start Simulation:- Importing Modules')
 
-import anuga, anuga.parallel, numpy, time, os, glob
-from anuga.operators.rate_operators import Polygonal_rate_operator
+import anuga, numpy, time, os, glob
 from anuga import file_function, Polygon_function, read_polygon, create_mesh_from_regions, Domain, Inlet_operator
 import anuga.utilities.spatialInputUtil as su
 
 from anuga import distribute, myid, numprocs, finalize, barrier
-from anuga.parallel.parallel_operator_factory import Inlet_operator, Boyd_box_operator, Boyd_pipe_operator
+from anuga import Inlet_operator, Boyd_box_operator, Boyd_pipe_operator
 from anuga import Rate_operator
 from anuga import Region
 
@@ -70,7 +69,7 @@ print ('Available boundary tags', domain.get_boundary_tags())
 Br = anuga.Reflective_boundary(domain)  
 Bd = anuga.Dirichlet_boundary([0,0,0])
 
-domain.set_boundary({'interior': Br, 'exterior': Bd, 'west': Bd, 'south': Bd, 'north': Bd, 'east': Bd})
+domain.set_boundary({'interior': Br, 'exterior': Br, 'west': Br, 'south': Br, 'north': Br, 'east': Br})
  
 # ------------------------------------------------------------------------------
 # Setup inject water
@@ -94,7 +93,7 @@ inlet1_anuga_inlet_op = Inlet_operator(domain, inlet1_anuga_region, Q=0.0, zero_
 inlet2_anuga_inlet_op = Inlet_operator(domain, inlet2_anuga_region, Q=0.0, zero_velocity=True)
 inlet3_anuga_inlet_op = Inlet_operator(domain, inlet3_anuga_region, Q=0.0, zero_velocity=True)
 inlet4_anuga_inlet_op = Inlet_operator(domain, inlet4_anuga_region, Q=0.0, zero_velocity=True)
-outlet_anuga_outlet_op = Inlet_operator(domain, outlet_anuga_region, Q=0.0, zero_velocity=False)
+outlet_anuga_inlet_op = Inlet_operator(domain, outlet_anuga_region, Q=0.0, zero_velocity=False)
 
 
 
@@ -128,11 +127,32 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     print('\n')
     domain.print_timestepping_statistics()
 
+
+    # Diagnostics 
+    # Compute volumes
+    link_volume = ((superlink._A_ik * superlink._dx_ik).sum() +
+                   (superlink._A_SIk * superlink._h_Ik).sum())
+    node_volume = (superlink._A_sj * (superlink.H_j - superlink._z_inv_j)).sum()
+    sewer_volume = link_volume + node_volume
+    total_volume_correct = t * input_rate
+    total_volume_real = domain.get_water_volume() + sewer_volume
+    loss = total_volume_real - total_volume_correct
+
+    # Append data
+    losses.append(loss)
+    H_js.append(superlink.H_j.copy())
+    
+    # record flow time series in each pipe
+    Q_iks.append(superlink.Q_ik.copy())
+    Q_uks.append(superlink.Q_uk.copy())
+    Q_dks.append(superlink.Q_dk.copy())
+
+    # Setup the Coupling
     anuga_depths = np.array([inlet1_anuga_inlet_op.inlet.get_average_depth(),
                              inlet2_anuga_inlet_op.inlet.get_average_depth(),
                              inlet3_anuga_inlet_op.inlet.get_average_depth(),
                              inlet4_anuga_inlet_op.inlet.get_average_depth(),
-                             outlet_anuga_outlet_op.inlet.get_average_depth()])
+                             outlet_anuga_inlet_op.inlet.get_average_depth()])
 
     # Compute inflow/outflow to sewer
     C_w = 0.67
@@ -151,25 +171,8 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     inlet2_anuga_inlet_op.set_Q(-Q_in[1])
     inlet3_anuga_inlet_op.set_Q(-Q_in[2])
     inlet4_anuga_inlet_op.set_Q(-Q_in[3])
-    outlet_anuga_outlet_op.set_Q(-Q_in[4])
+    outlet_anuga_inlet_op.set_Q(-Q_in[4])
 
-    # Compute volumes
-    link_volume = ((superlink._A_ik * superlink._dx_ik).sum() +
-                   (superlink._A_SIk * superlink._h_Ik).sum())
-    node_volume = (superlink._A_sj * (superlink.H_j - superlink._z_inv_j)).sum()
-    sewer_volume = link_volume + node_volume
-    total_volume_correct = t * input_rate
-    total_volume_real = domain.get_water_volume() + sewer_volume
-    loss = total_volume_real - total_volume_correct
-
-    # Append data
-    losses.append(loss)
-    H_js.append(superlink.H_j.copy())
-    
-    # record flow time series in each pipe
-    Q_iks.append(superlink.Q_ik.copy())
-    Q_uks.append(superlink.Q_uk.copy())
-    Q_dks.append(superlink.Q_dk.copy())
 
 H_j = np.vstack(H_js)
 
@@ -189,13 +192,13 @@ plt.title('losses')
 plt.show()
 
 plt.plot(Q_uks)
-plt.legend()
+plt.title('Q_uks')
 plt.show()
 
 plt.plot(Q_iks)
-plt.legend()
+plt.title('Q_iks')
 plt.show()
 
 plt.plot(Q_dks)
-plt.legend()
+plt.title('Q_dks')
 plt.show()
