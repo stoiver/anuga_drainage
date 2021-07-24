@@ -1,6 +1,3 @@
-""" 
-Strathhearn Ave flow
-"""
 #------------------------------------------------------------------------------
 # IMPORT NECESSARY MODULES
 #------------------------------------------------------------------------------
@@ -23,23 +20,22 @@ import math
 # FILENAMES, MODEL DOMAIN and VARIABLES
 #------------------------------------------------------------------------------
 
-basename = 'terrain'
+basename = 'model/terrain'
 outname = 'pipes'
-meshname = 'terrain.tsh'
+meshname = 'model/terrain.tsh'
 
 #------------------------------------------------------------------------------
 # CREATING MESH
 #------------------------------------------------------------------------------
+CatchmentDictionary = {'model/kerb/kerb1.csv':0.01, 'model/kerb/kerb2.csv':0.01}
+    
+bounding_polygon = anuga.read_polygon('model/domain.csv')
+interior_regions = anuga.read_polygon_dir(CatchmentDictionary, 'model/kerb')
 
-riverWall_csv_files = glob.glob('kerb/*.csv') # Make a list of the csv files in BREAKLINES
-(riverWalls, riverWall_parameters) = su.readListOfRiverWalls(riverWall_csv_files)
-
-bounding_polygon = anuga.read_polygon('domain.csv')
-
-create_mesh_from_regions(bounding_polygon, 
+create_mesh_from_regions(bounding_polygon,
     boundary_tags={'south': [0], 'east': [1], 'north': [2], 'west': [3]},
-    maximum_triangle_area=0.05,
-    breaklines=riverWalls.values(),
+    maximum_triangle_area=0.1,
+    interior_regions=interior_regions,
     filename=meshname,
     use_cache=False,
     verbose=True)
@@ -48,8 +44,8 @@ create_mesh_from_regions(bounding_polygon,
 # SETUP COMPUTATIONAL DOMAIN
 #------------------------------------------------------------------------------
 
-domain = anuga.Domain(meshname, use_cache=True, verbose=True)
-domain.riverwallData.create_riverwalls(riverWalls)
+domain = anuga.Domain(meshname, use_cache=False, verbose=True)
+domain.set_minimum_storable_height(0.025)
 domain.set_name(outname) 
 
 print (domain.statistics())
@@ -58,7 +54,7 @@ print (domain.statistics())
 # APPLY MANNING'S ROUGHNESSES
 #------------------------------------------------------------------------------
 
-domain.set_quantity('friction', 0.025)
+domain.set_quantity('friction', 0.03)
 
 # Set a Initial Water Level over the Domain
 domain.set_quantity('stage', 0)
@@ -74,30 +70,31 @@ print ('Available boundary tags', domain.get_boundary_tags())
 Br = anuga.Reflective_boundary(domain)  
 Bd = anuga.Dirichlet_boundary([0,0,0])
 
-domain.set_boundary({'interior': Br, 'exterior': Br, 'west': Br, 'south': Br, 'north': Br, 'east': Br})
+domain.set_boundary({'interior': Br, 'exterior': Bd, 'west': Bd, 'south': Bd, 'north': Bd, 'east': Bd})
  
 # ------------------------------------------------------------------------------
 # Setup inject water
 # ------------------------------------------------------------------------------
-input_rate = 0.1
-input1_anuga_region = Region(domain, radius=1.0, center=(305692.98,6188014.56))
-input1_anuga_inlet_op = Inlet_operator(domain, input1_anuga_region, Q=input_rate) 
+input_rate = 0.102
+input1_anuga_region = Region(domain, radius=1.0, center=(305694.91,6188013.94))
+input1_anuga_inlet_op = Inlet_operator(domain, input1_anuga_region, Q=input_rate) # i made flow exactly the same as in DRAINS example
 
 # ------------------------------------------------------------------------------
 # Setup pipedream inlets
 # ------------------------------------------------------------------------------
+radius=.25
 
-inlet1_anuga_region = Region(domain, radius=0.25, center=(305698.51,6188004.63))
-inlet2_anuga_region = Region(domain, radius=0.25, center=(305703.39,6187999.00))
-inlet3_anuga_region = Region(domain, radius=0.25, center=(305713.18,6188002.02))
-inlet4_anuga_region = Region(domain, radius=0.25, center=(305727.24,6188004.61))
-outlet_anuga_region = Region(domain, radius=0.25, center=(305736.68,6188026.65))
+inlet1_anuga_region = Region(domain, radius=radius, center=(305698.51,6188004.63))
+inlet2_anuga_region = Region(domain, radius=radius, center=(305703.39,6187999.00))
+inlet3_anuga_region = Region(domain, radius=radius, center=(305713.18,6188002.02))
+inlet4_anuga_region = Region(domain, radius=radius, center=(305727.24,6188004.61))
+outlet_anuga_region = Region(domain, radius=radius, center=(305736.68,6188026.65))
 
 inlet1_anuga_inlet_op = Inlet_operator(domain, inlet1_anuga_region, Q=0.0, zero_velocity=True)
 inlet2_anuga_inlet_op = Inlet_operator(domain, inlet2_anuga_region, Q=0.0, zero_velocity=True)
 inlet3_anuga_inlet_op = Inlet_operator(domain, inlet3_anuga_region, Q=0.0, zero_velocity=True)
 inlet4_anuga_inlet_op = Inlet_operator(domain, inlet4_anuga_region, Q=0.0, zero_velocity=True)
-outlet_anuga_inlet_op = Inlet_operator(domain, outlet_anuga_region, Q=0.0, zero_velocity=False)
+outlet_anuga_outlet_op = Inlet_operator(domain, outlet_anuga_region, Q=0.0, zero_velocity=False)
 
 
 
@@ -135,7 +132,7 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
                              inlet2_anuga_inlet_op.inlet.get_average_depth(),
                              inlet3_anuga_inlet_op.inlet.get_average_depth(),
                              inlet4_anuga_inlet_op.inlet.get_average_depth(),
-                             outlet_anuga_inlet_op.inlet.get_average_depth()])
+                             outlet_anuga_outlet_op.inlet.get_average_depth()])
 
     # Compute inflow/outflow to sewer
     C_w = 0.67
@@ -154,7 +151,7 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     inlet2_anuga_inlet_op.set_Q(-Q_in[1])
     inlet3_anuga_inlet_op.set_Q(-Q_in[2])
     inlet4_anuga_inlet_op.set_Q(-Q_in[3])
-    outlet_anuga_inlet_op.set_Q(-Q_in[4])
+    outlet_anuga_outlet_op.set_Q(-Q_in[4])
 
     # Compute volumes
     link_volume = ((superlink._A_ik * superlink._dx_ik).sum() +
@@ -187,13 +184,18 @@ plt.xlabel('Time (s)')
 plt.ylabel('Head (m)')
 plt.show()
 
-plt.clf()
 plt.plot(losses)
 plt.title('losses')
 plt.show()
 
+plt.plot(Q_uks)
+plt.legend()
+plt.show()
 
-plt.clf()
+plt.plot(Q_iks)
+plt.legend()
+plt.show()
+
 plt.plot(Q_dks)
-plt.title('Q_dks')
+plt.legend()
 plt.show()

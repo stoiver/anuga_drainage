@@ -1,6 +1,3 @@
-""" 
-Strathhearn Ave flow
-"""
 #------------------------------------------------------------------------------
 # IMPORT NECESSARY MODULES
 #------------------------------------------------------------------------------
@@ -23,23 +20,22 @@ import math
 # FILENAMES, MODEL DOMAIN and VARIABLES
 #------------------------------------------------------------------------------
 
-basename = 'terrain'
+basename = 'model/terrain'
 outname = 'no_pipes'
-meshname = 'terrain.tsh'
+meshname = 'model/terrain.tsh'
 
 #------------------------------------------------------------------------------
 # CREATING MESH
 #------------------------------------------------------------------------------
+CatchmentDictionary = {'model/kerb/kerb1.csv':0.01, 'model/kerb/kerb2.csv':0.01}
+    
+bounding_polygon = anuga.read_polygon('model/domain.csv')
+interior_regions = anuga.read_polygon_dir(CatchmentDictionary, 'model/kerb')
 
-riverWall_csv_files = glob.glob('kerb/*.csv') # Make a list of the csv files in BREAKLINES
-(riverWalls, riverWall_parameters) = su.readListOfRiverWalls(riverWall_csv_files)
-
-bounding_polygon = anuga.read_polygon('domain.csv')
-
-create_mesh_from_regions(bounding_polygon, 
+create_mesh_from_regions(bounding_polygon,
     boundary_tags={'south': [0], 'east': [1], 'north': [2], 'west': [3]},
-    maximum_triangle_area=0.05,
-    breaklines=riverWalls.values(),
+    maximum_triangle_area=0.1,
+    interior_regions=interior_regions,
     filename=meshname,
     use_cache=False,
     verbose=True)
@@ -48,8 +44,8 @@ create_mesh_from_regions(bounding_polygon,
 # SETUP COMPUTATIONAL DOMAIN
 #------------------------------------------------------------------------------
 
-domain = anuga.Domain(meshname, use_cache=True, verbose=True)
-domain.riverwallData.create_riverwalls(riverWalls)
+domain = anuga.Domain(meshname, use_cache=False, verbose=True)
+domain.set_minimum_storable_height(0.025)
 domain.set_name(outname) 
 
 print (domain.statistics())
@@ -58,7 +54,7 @@ print (domain.statistics())
 # APPLY MANNING'S ROUGHNESSES
 #------------------------------------------------------------------------------
 
-domain.set_quantity('friction', 0.025)
+domain.set_quantity('friction', 0.03)
 
 # Set a Initial Water Level over the Domain
 domain.set_quantity('stage', 0)
@@ -80,13 +76,13 @@ domain.set_boundary({'interior': Br, 'exterior': Bd, 'west': Bd, 'south': Bd, 'n
 # Setup inject water
 # ------------------------------------------------------------------------------
 
-input1_anuga_region = Region(domain, radius=1.0, center=(305692.98,6188014.56))
-input1_anuga_inlet_op = Inlet_operator(domain, input1_anuga_region, Q=0.1) 
+input1_anuga_region = Region(domain, radius=1.0, center=(305694.91,6188013.94))
+input1_anuga_inlet_op = Inlet_operator(domain, input1_anuga_region, Q=0.102) # i made flow exactly the same as in DRAINS example
 
 
 
-dt = 1    # yield step
-ft = 100  # final timestep
+dt = 0.5    # yield step
+ft = 100    # final timestep
 
 
 
