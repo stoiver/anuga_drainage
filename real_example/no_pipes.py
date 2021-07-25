@@ -3,13 +3,12 @@
 #------------------------------------------------------------------------------
 print (' ABOUT to Start Simulation:- Importing Modules')
 
-import anuga, anuga.parallel, numpy, time, os, glob
-from anuga.operators.rate_operators import Polygonal_rate_operator
-from anuga import file_function, Polygon_function, read_polygon, create_mesh_from_regions, Domain, Inlet_operator
+import anuga, numpy, time, os, glob
+from anuga import file_function, Polygon_function, read_polygon, create_mesh_from_regions
 import anuga.utilities.spatialInputUtil as su
 
 from anuga import distribute, myid, numprocs, finalize, barrier
-from anuga.parallel.parallel_operator_factory import Inlet_operator, Boyd_box_operator, Boyd_pipe_operator
+from anuga import Inlet_operator, Boyd_box_operator, Boyd_pipe_operator
 from anuga import Rate_operator
 from anuga import Region
 
@@ -58,7 +57,6 @@ domain.set_quantity('friction', 0.03)
 
 # Set a Initial Water Level over the Domain
 domain.set_quantity('stage', 0)
-
 domain.set_quantity('elevation', filename=basename+'.csv', use_cache=False, verbose=True, alpha=0.99)
 
 #------------------------------------------------------------------------------
@@ -70,7 +68,7 @@ print ('Available boundary tags', domain.get_boundary_tags())
 Br = anuga.Reflective_boundary(domain)  
 Bd = anuga.Dirichlet_boundary([0,0,0])
 
-domain.set_boundary({'interior': Br, 'exterior': Bd, 'west': Bd, 'south': Bd, 'north': Bd, 'east': Bd})
+domain.set_boundary({'interior': Br, 'exterior': Br, 'west': Br, 'south': Br, 'north': Br, 'east': Br})
  
 # ------------------------------------------------------------------------------
 # Setup inject water
