@@ -1,5 +1,5 @@
 GLOBAL_MAPPER_SCRIPT VERSION="1.00" FILENAME="E:\home\dpm\Downloads\anuga-pipedream-link\real_example\project.gmw" \
-	 GM_VERSION="18.0.0" TIMESTAMP="2021-07-24T00:15:26Z"
+	 GM_VERSION="18.0.0" TIMESTAMP="2021-07-25T00:08:40Z"
 SET_BG_COLOR COLOR="RGB(255,255,255)"
 UNLOAD_ALL
 DEFINE_PROJ PROJ_NAME="MGA_ZONE56_GDA_94_AUSTRALIAN_GEODETIC_1994"
@@ -17,7 +17,8 @@ IMPORT_ASCII FILENAME="E:\home\dpm\Downloads\anuga-pipedream-link\real_example\m
 	 COORD_FORMAT="DECIMAL" COORD_ORDER="X_FIRST" INC_COORD_LINE_ATTRS="NO" COL_HEADERS="NO" \
 	 INC_ELEV_COORDS="YES" CREATE_AREAS_FROM_LINES="NO" GRID_FILL_TO_BOUNDS="NO" GRID_IGNORE_ZERO="NO" \
 	 NO_DATA_DIST_MULT="0.00" GRID_ALG="TIN" SKIP_COLUMNS="0" SKIP_ROWS="0" LINE_TYPE="Unclassified Line Feature" \
-	 LABEL_FIELD_FORCE_OVERWRITE="NO" CLIP_COLLAR="NONE" SAMPLING_METHOD="BILINEAR" ELEV_UNITS="METERS"
+	 LABEL_FIELD_FORCE_OVERWRITE="NO" HIDDEN="YES" CLIP_COLLAR="NONE" SAMPLING_METHOD="BILINEAR" \
+	 ELEV_UNITS="METERS"
 
 /************ DEFINE LAYER STYLE *************/
 DEFINE_LAYER_STYLE NAME="LINE_STYLE" TYPE="LINE"
@@ -36,35 +37,27 @@ PointStyleForAll=Dot - Blue@SCALE=4
 FontForAll=~0~534799372~0.000~0~0~16777215
 END_DEFINE_LAYER_STYLE
 
-EMBED_OVERLAY DATA_SIZE="1201" ELEV_UNITS="METERS" LABEL_FIELD_FORCE_OVERWRITE="NO" \
+EMBED_OVERLAY DATA_SIZE="844" ELEV_UNITS="METERS" LABEL_FIELD_FORCE_OVERWRITE="NO" \
 	 LINE_STYLE_NAME="LINE_STYLE" POINT_STYLE_NAME="POINT_STYLE" CLIP_COLLAR="NONE"
-M?`$!`!`!``!\`0``!0```($!``"X````.0(``,<``````P```````!0`````
-M`P``+````"P````L`P``#`````P````X`P````````P````X`P``#`````P`
-M``!$`P``U0```!D$````````&00``)@`````````````````````````````
-M``````````````````````````````````````````````````"Q!```````
+M?`$!`!`!``!\`0``!0```($!``"X````.0(``(4```"^`@```````!0```"^
+M`@```````"P```"^`@````````P```"^`@````````P```"^`@``#`````P`
+M``#*`@```````,H"````````R@(``((`````````````````````````````
+M``````````````````````````````````````````````````!,`P``````
 M````````````````````````````````````````````````````````````
 M````````````````````````````````````````````````````````````
-M````````````````````````````````````````````````L00`````````
-M`````````+$$`````````````````````````````/____^Q!```````````
-M``"Q!```````````````````(P!P:71S`%!R;VIE8W1I;VX@("`@($U'02`H
+M````````````````````````````````````````````````3`,`````````
+M`````````$P#`````````````````````````````/____],`P``````````
+M``!,`P``````````````````(P!P:71S`%!R;VIE8W1I;VX@("`@($U'02`H
 M36%P($=R:60@;V8@075S=')A;&EA*0I$871U;2`@("`@("`@("!'1$$Y-`I:
 M=6YI=',@("`@("`@("!-151%4@I5;FET<R`@("`@("`@("!-151%4E,*6F]N
 M92`@("`@("`@("`@-38*6'-H:69T("`@("`@("`@,"XP,#`P,#`*67-H:69T
-M("`@("`@("`@,"XP,#`P,#`*4&%R86UE=&5R<P``,"XP,#(P-C8@<W$@:VT`
-M,3DW+C$W(&T`,S$N.3DW(&T`,S0N,SDS(&T`,S4N-3,Q(&T`,S<N-#,R(&T`
-M,S@N-3(Y(&T`1&]T`$1O="`M($)L=65`4T-!3$4]-`!%3$56051)3TX`14Y#
-M3$]3141?05)%00!015))345415(`56YK;F]W;B!!<F5A(%1Y<&4`56YK;F]W
-M;B!0;VEN="!&96%T=7)E`'XP?C4S-#<Y.3,W,GXP+C`P,'XP?C!^,38W-S<R
-M,34``0```$```````"``````````````````````````````````````````
-M``!_`````````*<```"1````1@```*<```#5`("9```"`'409P$,````;LRD
-MME>H$D&JRN'2^YI705!ZBKUVJ!)!1'@H\/R:5T$CO33TY*@209'DHTC_FE=!
-MOE&0;/JH$D%LDW?:`IM709ATC`@UJ1)!($Q,D0&;5T&N0M9P^Z@20>'WSWCU
-MFE=!VF%LM)&H$D$-DGHJ\9I700\WU2-WJ!)!JMOS_/*:5T'YAG5Z;Z@208G6
-MW%#TFE=!0.OR+7&H$D%."RLR]9I70?`!V:!BJ!)!\:RF"OF:5T%NS*2V5Z@2
-M0:K*X=+[FE=!$``````:```9```!`%TTY.C"C)VH$D&HC$C`]YI701H``!D`
-M``$`72),RX7Y_*@207;W0"?YFE=!&@``&0```0!=&96QE<`BJ1)!-H@YJOZ:
-M5T$:```9```!`%T]ZT>M#XJH$D%+<'4H^9I701H``!D```$`72NO%HJ[Q*@2
-?09]OOX'XFE=!%@"`$0``2*F;\'.H$D&A+?FC^YI700``
+M("`@("`@("`@,"XP,#`P,#`*4&%R86UE=&5R<P``,S$N.3DW(&T`,S0N,SDS
+M(&T`,S4N-3,Q(&T`,S<N-#,R(&T`,S@N-3(Y(&T`1&]T`$1O="`M($)L=65`
+M4T-!3$4]-`!%3$56051)3TX`56YK;F]W;B!0;VEN="!&96%T=7)E`'XP?C4S
+M-#<Y.3,W,GXP+C`P,'XP?C!^,38W-S<R,34`3P```"X```!E````&@``&0``
+M`0!%'.3HPHR=J!)!J(Q(P/>:5T$:```9```!`$4*3,N%^?RH$D%V]T`G^9I7
+M01H``!D```$`10&5L97`(JD203:(.:K^FE=!&@``&0```0!%)>M'K0^*J!)!
+B2W!U*/F:5T$:```9```!`$43KQ:*N\2H$D&?;[^!^)I700``
 `
 end
 EMBED_OVERLAY DATA_SIZE="1118" ELEV_UNITS="METERS" LABEL_FIELD_FORCE_OVERWRITE="NO" \
@@ -114,8 +107,35 @@ IMPORT_ASCII FILENAME="E:\home\dpm\Downloads\anuga-pipedream-link\real_example\m
 	 INC_ELEV_COORDS="YES" CREATE_AREAS_FROM_LINES="NO" SKIP_COLUMNS="0" SKIP_ROWS="0" \
 	 LINE_TYPE="Unclassified Line Feature" ELEV_UNITS="METERS" LABEL_FIELD_FORCE_OVERWRITE="NO" \
 	 CLIP_COLLAR="NONE"
+EMBED_OVERLAY DATA_SIZE="997" ELEV_UNITS="METERS" LABEL_FIELD_FORCE_OVERWRITE="NO" \
+	 CLIP_COLLAR="NONE"
+M?`$!`!`!``!\`0``%@```)(!``"X````2@(``%D```"C`@``%````!0```"W
+M`@```````"P```"W`@````````P```"W`@``#`````P```##`@````````P`
+M``##`@```````,,"```B`0``Y0,`````````````````````````````````
+M``````````````````````````````````````````````````#E`P``````
+M````````````````````````````````````````````````````````````
+M````````````````````````````````````````````````````````````
+M````````````````````````````````````````````````Y0,`````````
+M`````````.4#`````````````````````````````/_____E`P``````````
+M``#E`P``````````````````(P!5<V5R($-R96%T960@1F5A='5R97,`4')O
+M:F5C=&EO;B`@("`@34=!("A-87`@1W)I9"!O9B!!=7-T<F%L:6$I"D1A='5M
+M("`@("`@("`@($=$03DT"EIU;FET<R`@("`@("`@($U%5$52"E5N:71S("`@
+M("`@("`@($U%5$524PI:;VYE("`@("`@("`@("`U-@I8<VAI9G0@("`@("`@
+M("`P+C`P,#`P,`I9<VAI9G0@("`@("`@("`P+C`P,#`P,`I087)A;65T97)S
+M```V-2XS-3<@;0`V-K`@,C`G(#,Y+C(B`$)%05))3D<`3$5.1U1(`%5N:VYO
+M=VX@3&EN92!4>7!E`'XP?C4S-#@W-C$W,'XP+C`P,'XP?C!^,38W-S<R,34`
+M`0``````(``````````````````G`````````#D````B`0"9```"`"`!&`H1
+M````.GQA1WFH$D&5#*N0_)I7048'5]6,J!)!TNPY]?B:5T'34;&@CJ@2036(
+M';'XFE=!R:+_#)&H$D&PPPUX^)I70:^_3**3J!)!1P'R0/B:5T'4YYY6F*@2
+M02JL;P'XFE=!99*!39RH$D$1SU37]YI702T&?<.?J!)!JQ"9P_>:5T&M]@M;
+MJ*@206EXV:WWFE=!<$WS&K"H$D'>0G&Y]YI705/%H;BXJ!)!R0HR^/>:5T$P
+MMD_9P*@20>1FP%SXFE=!7,P^(,BH$D%:8$[@^)I70123Z5+-J!)!K9^)5?F:
+M5T%_/MTRT:@204.(=\GYFE=!DKYGC-2H$D%3B+T^^II7080>KW[UJ!)!@L@N
+'*0";5T$"`0``
+`
+end
 LOAD_PROJECTION PROJ_NAME="MGA_ZONE56_GDA_94_AUSTRALIAN_GEODETIC_1994"
-SET_VIEW GLOBAL_BOUNDS="305673.342,6187985.300,305758.864,6188036.015"
+SET_VIEW GLOBAL_BOUNDS="305721.184,6188027.272,305732.446,6188033.951"
 SET_VERT_DISP_OPTS SHADER_NAME="Atlas Shader" AMBIENT_LIGHT_LEVEL="0.0000000000" VERT_EXAG="3.0000000" \
 	 LIGHT_ALTITUDE="45.000000" LIGHT_AZIMUTH="45.000000" LIGHT_NUM_SOURCES="1" LIGHT_BLENDING_ALGORITHM="0" \
 	 SLOPE_ALGORITHM="0" ENABLE_HILL_SHADING="YES" SHADE_DARKNESS="0" SHADE_HIGHLIGHT="0" \
