@@ -35,8 +35,21 @@ CatchmentDictionary = {'model/kerb/kerb1.csv':0.01, 'model/kerb/kerb2.csv':0.01}
 bounding_polygon = anuga.read_polygon('model/domain.csv')
 interior_regions = anuga.read_polygon_dir(CatchmentDictionary, 'model/kerb')
 
+import numpy as num
+b_polygon = num.array(bounding_polygon)
+print(b_polygon)
+import matplotlib.pyplot as plt
+
+plt.figure()
+plt.plot(b_polygon[:,0],b_polygon[:,1])
+for i, v in enumerate(b_polygon):
+    plt.annotate(str(v), xy=v, xytext=(-7,7), textcoords='offset points')
+plt.pause(0.01)
+
+
 create_mesh_from_regions(bounding_polygon,
-    boundary_tags={'south': [0], 'east': [1], 'north': [2], 'west': [3]},
+    boundary_tags={'inflow': [12], 'bottom': [0,1,2,3,4,5], 'top': [7,8,9,10,11], 'outflow': [6]},
+    #boundary_tags=None,
     maximum_triangle_area=0.1,
     breaklines=riverWalls.values(),
     interior_regions=interior_regions,
@@ -74,8 +87,10 @@ print ('Available boundary tags', domain.get_boundary_tags())
 
 Br = anuga.Reflective_boundary(domain)  
 Bd = anuga.Dirichlet_boundary([0,0,0])
+#Bt = anuga.Flather_external_stage_zero_velocity_boundary()
 
-domain.set_boundary({'interior': Br, 'exterior': Bd, 'west': Bd, 'south': Bd, 'north': Bd, 'east': Bd})
+domain.set_boundary({'inflow': Br, 'bottom': Br, 'outflow': Bd, 'top': Br})
+#domain.set_boundary({'exterior' : Bd})
  
 # ------------------------------------------------------------------------------
 # Setup inject water
@@ -101,6 +116,12 @@ inlet3_anuga_inlet_op = Inlet_operator(domain, inlet3_anuga_region, Q=0.0, zero_
 inlet4_anuga_inlet_op = Inlet_operator(domain, inlet4_anuga_region, Q=0.0, zero_velocity=True)
 inlet4_anuga_inlet_op = Inlet_operator(domain, outlet_anuga_region, Q=0.0, zero_velocity=False)
 
+anuga_elevs = np.array([inlet1_anuga_inlet_op.inlet.get_average_elevation(),
+                        inlet2_anuga_inlet_op.inlet.get_average_elevation(),
+                        inlet3_anuga_inlet_op.inlet.get_average_elevation(),
+                        inlet4_anuga_inlet_op.inlet.get_average_elevation(),
+                        inlet4_anuga_inlet_op.inlet.get_average_elevation()])
+
 x = domain.centroid_coordinates[:, 0]
 y = domain.centroid_coordinates[:, 1]
 indices = np.where(x < 10)
@@ -109,16 +130,16 @@ from pipedream_solver.hydraulics import SuperLink
 import matplotlib.pyplot as plt
 import pandas as pd
 
-superjunctions = pd.DataFrame({'name' : [0, 1, 2, 3, 4], 'id' : [0, 1, 2, 3, 4], 'z_inv' : [37.5, 36.4, 34.5, 33.4, 32.0], 'h_0' : 5*[1e-5], 'bc' : 5*[False], 'storage' : 5*['functional'], 'a' : 5*[0.], 'b' : 5*[0.], 'c' : 5*[1.], 'max_depth' : 5*[np.inf], 'map_x' : 5*[0], 'map_y' : 5*[0]})
+superjunctions = pd.DataFrame({'name' : [0, 1, 2, 3, 4], 'id' : [0, 1, 2, 3, 4], 'z_inv' : [37.5, 36.4, 34.5, 32.0, 32.0], 'h_0' : 5*[1e-5], 'bc' : 5*[False], 'storage' : 5*['functional'], 'a' : 5*[0.], 'b' : 5*[0.], 'c' : 5*[1.], 'max_depth' : 5*[np.inf], 'map_x' : 5*[0], 'map_y' : 5*[0]})
 
 superlinks = pd.DataFrame({'name' : [0, 1, 2, 3], 'id' : [0, 1, 2, 3], 'sj_0' : [0, 1, 2, 3], 'sj_1' : [1, 2, 3, 4], 'in_offset' : 4*[0.], 'out_offset' : 4*[0.], 'dx' : [7.4, 10.3, 14.3, 24.0], 'n' : 4*[0.013], 'shape' : 4*['circular'], 'g1' : [0.375, 0.375, 0.375, 0.45], 'g2' : 4*[0.], 'g3' : 4*[0.], 'g4' : 4*[0.], 'Q_0' : 4*[0.], 'h_0' : 4*[1e-5], 'ctrl' : 4*[False], 'A_s' : 4*[1.12], 'A_c' : 4*[0.], 'C' : 4*[0.] }) # A_s surface area of pit (1sqm) + 1.2m lintel (0.1x1.2m long = 0.12sqm)
 
 superlink = SuperLink(superlinks, superjunctions, internal_links=20)
 
-surface_elev = np.array([38.529, 37.432, 35.531, 34.393, 32.0]) # surface elevation from terrain dem
+surface_elev = np.array([38.5489161, 37.46895542, 35.59301592, 32.00173483, 32.00173483]) # surface elevation from terrain dem
 
-dt = 0.5    # yield step
-ft = 250  # final timestep
+dt = 1.0     # yield step
+ft = 250.0   # final timestep
 
 H_js = []
 losses = []
@@ -126,10 +147,15 @@ losses = []
 Q_iks =[]
 Q_uks =[]
 Q_dks =[]
+times =[]
+
+Q_in_old = np.zeros_like(anuga_elevs)
+time_average = 10 # sec
 
 for t in domain.evolve(yieldstep=dt, finaltime=ft):
     print('\n')
     domain.print_timestepping_statistics()
+    #print(domain.volumetric_balance_statistics())
 
     anuga_depths = np.array([inlet1_anuga_inlet_op.inlet.get_average_depth(),
                              inlet2_anuga_inlet_op.inlet.get_average_depth(),
@@ -137,14 +163,40 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
                              inlet4_anuga_inlet_op.inlet.get_average_depth(),
                              inlet4_anuga_inlet_op.inlet.get_average_depth()])
 
+    anuga_stages = np.array([inlet1_anuga_inlet_op.inlet.get_average_stage(),
+                             inlet2_anuga_inlet_op.inlet.get_average_stage(),
+                             inlet3_anuga_inlet_op.inlet.get_average_stage(),
+                             inlet4_anuga_inlet_op.inlet.get_average_stage(),
+                             inlet4_anuga_inlet_op.inlet.get_average_stage()])
+
+
+
     # Compute inflow/outflow to sewer
     C_w = 0.67
-    L_w = 0.5**2 * np.pi
-    Q_in = np.where(superlink.H_j <= surface_elev,
-                    C_w * L_w * np.sqrt(anuga_depths) * anuga_depths,
-                    C_w * L_w * np.sqrt(np.abs(anuga_depths - (superlink.H_j - surface_elev)))
-                    * (anuga_depths - (superlink.H_j - surface_elev)) )
+    L_w = 0.25**2 * np.pi
 
+    Q_in = np.where(superlink.H_j <= anuga_elevs,
+                    C_w * L_w * np.sqrt(anuga_depths) * anuga_depths,
+                    C_w * L_w * np.sqrt(superlink.H_j - anuga_elevs)
+                    * (anuga_elevs- superlink.H_j ))
+
+
+    # average it out
+    Q_in = ((time_average - dt)*Q_in_old + dt*Q_in)/time_average
+    Q_in_old = Q_in
+
+    #Q_in = np.where(superlink.H_j <= anuga_stages,
+    #               C_w * L_w * np.sqrt(anuga_depths) * anuga_depths, 0.0 )
+
+                    
+    print(anuga_depths)
+    print(anuga_elevs)
+    print(anuga_stages)
+    
+    print(superlink.H_j)
+    print(Q_in)
+
+ 
     # Simulate sewer with flow input
     superlink.step(Q_in=Q_in, dt=dt)
     superlink.reposition_junctions()
@@ -161,11 +213,18 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
                    (superlink._A_SIk * superlink._h_Ik).sum())
     node_volume = (superlink._A_sj * (superlink.H_j - superlink._z_inv_j)).sum()
     sewer_volume = link_volume + node_volume
-    total_volume_correct = t * input_rate
+
+    boundary_flow = domain.get_boundary_flux_integral()
+    total_volume_correct = t*input_rate + boundary_flow
+
     total_volume_real = domain.get_water_volume() + sewer_volume
     loss = total_volume_real - total_volume_correct
+    
+
+    print('boundary flow', boundary_flow)
 
     # Append data
+    times.append(t)
     losses.append(loss)
     H_js.append(superlink.H_j.copy())
     
@@ -176,32 +235,31 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
 
 H_j = np.vstack(H_js)
 
-plt.plot(H_j[:,0], label='Inlet 1')
-plt.plot(H_j[:,1], label='Inlet 2')
-plt.plot(H_j[:,2], label='Inlet 3')
-plt.plot(H_j[:,3], label='Inlet 4')
-plt.plot(H_j[:,4], label='Outlet')
+plt.show()
+
+plt.plot(times,H_j[:,0], label='Inlet 1')
+plt.plot(times,H_j[:,1], label='Inlet 2')
+plt.plot(times,H_j[:,2], label='Inlet 3')
+plt.plot(times,H_j[:,3], label='Inlet 4')
+plt.plot(times,H_j[:,4], label='Outlet')
 plt.legend()
 plt.title('Head at junctions')
 plt.xlabel('Time (s)')
 plt.ylabel('Head (m)')
 plt.show()
 
-plt.plot(losses)
+plt.plot(times,losses)
 plt.title('losses (total_volume_real - total_volume_correct)')
 plt.show()
 
-plt.plot(Q_iks)
-plt.legend()
+plt.plot(times,Q_iks)
 plt.title('Link flows (m^3/s)')
 plt.show()
 
-plt.plot(Q_uks)
-plt.legend()
+plt.plot(times,Q_uks)
 plt.title('Flows into upstream ends of superlinks (m^3/s) ')
 plt.show()
 
-plt.plot(Q_dks)
-plt.legend()
+plt.plot(times,Q_dks)
 plt.title('Flows into downstream ends of superlinks (m^3/s) ')
 plt.show()
