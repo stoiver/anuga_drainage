@@ -95,7 +95,7 @@ domain.set_boundary({'inflow': Br, 'bottom': Br, 'outflow': Bd, 'top': Br})
 # ------------------------------------------------------------------------------
 # Setup inject water
 # ------------------------------------------------------------------------------
-input_rate = 0.102 # i made inflow exactly the same as in DRAINS example
+input_rate = 0.05 #  0.102 # i made inflow exactly the same as in DRAINS example
 input1_anuga_region = Region(domain, radius=1.0, center=(305694.91,6188013.94))
 input1_anuga_inlet_op = Inlet_operator(domain, input1_anuga_region, Q=input_rate) 
 
@@ -114,7 +114,7 @@ inlet1_anuga_inlet_op = Inlet_operator(domain, inlet1_anuga_region, Q=0.0, zero_
 inlet2_anuga_inlet_op = Inlet_operator(domain, inlet2_anuga_region, Q=0.0, zero_velocity=True)
 inlet3_anuga_inlet_op = Inlet_operator(domain, inlet3_anuga_region, Q=0.0, zero_velocity=True)
 inlet4_anuga_inlet_op = Inlet_operator(domain, inlet4_anuga_region, Q=0.0, zero_velocity=True)
-inlet4_anuga_inlet_op = Inlet_operator(domain, outlet_anuga_region, Q=0.0, zero_velocity=False)
+inlet4_anuga_inlet_op = Inlet_operator(domain, outlet_anuga_region, Q=0.0, zero_velocity=True)
 
 anuga_elevs = np.array([inlet1_anuga_inlet_op.inlet.get_average_elevation(),
                         inlet2_anuga_inlet_op.inlet.get_average_elevation(),
@@ -130,9 +130,38 @@ from pipedream_solver.hydraulics import SuperLink
 import matplotlib.pyplot as plt
 import pandas as pd
 
-superjunctions = pd.DataFrame({'name' : [0, 1, 2, 3, 4], 'id' : [0, 1, 2, 3, 4], 'z_inv' : [37.5, 36.4, 34.5, 32.0, 32.0], 'h_0' : 5*[1e-5], 'bc' : 5*[False], 'storage' : 5*['functional'], 'a' : 5*[0.], 'b' : 5*[0.], 'c' : 5*[1.], 'max_depth' : 5*[np.inf], 'map_x' : 5*[0], 'map_y' : 5*[0]})
+superjunctions = pd.DataFrame({'name': [0, 1, 2, 3, 4],
+                               'id': [0, 1, 2, 3, 4],
+                               'z_inv': [37.5, 36.4, 34.5, 32.0, 32.0],
+                               'h_0': 5*[1e-5],
+                               'bc': 5*[False],
+                               'storage': 5*['functional'],
+                               'a': 5*[0.],
+                               'b': 5*[0.],
+                               'c': 5*[1.],
+                               'max_depth': 5*[np.inf],
+                               'map_x': 5*[0],
+                               'map_y': 5*[0]})
 
-superlinks = pd.DataFrame({'name' : [0, 1, 2, 3], 'id' : [0, 1, 2, 3], 'sj_0' : [0, 1, 2, 3], 'sj_1' : [1, 2, 3, 4], 'in_offset' : 4*[0.], 'out_offset' : 4*[0.], 'dx' : [7.4, 10.3, 14.3, 24.0], 'n' : 4*[0.013], 'shape' : 4*['circular'], 'g1' : [0.375, 0.375, 0.375, 0.45], 'g2' : 4*[0.], 'g3' : 4*[0.], 'g4' : 4*[0.], 'Q_0' : 4*[0.], 'h_0' : 4*[1e-5], 'ctrl' : 4*[False], 'A_s' : 4*[1.12], 'A_c' : 4*[0.], 'C' : 4*[0.] }) # A_s surface area of pit (1sqm) + 1.2m lintel (0.1x1.2m long = 0.12sqm)
+superlinks = pd.DataFrame({'name': [0, 1, 2, 3],
+                           'id': [0, 1, 2, 3],
+                           'sj_0': [0, 1, 2, 3],
+                           'sj_1': [1, 2, 3, 4],
+                           'in_offset': 4*[0.],
+                           'out_offset': 4*[0.],
+                           'dx': [7.4, 10.3, 14.3, 24.0],
+                           'n': 4*[0.013],
+                           'shape': 4*['circular'],
+                           'g1': [0.375, 0.375, 0.375, 0.45],
+                           'g2': 4*[0.],
+                           'g3': 4*[0.],
+                           'g4': 4*[0.],
+                           'Q_0': 4*[0.],
+                           'h_0': 4*[1e-5],
+                           'ctrl': 4*[False],
+                           'A_s': 4*[1.12],
+                           'A_c': 4*[0.],
+                           'C': 4*[0.]})  # A_s surface area of pit (1sqm) + 1.2m lintel (0.1x1.2m long = 0.12sqm)
 
 superlink = SuperLink(superlinks, superjunctions, internal_links=20)
 
@@ -233,9 +262,24 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     Q_uks.append(superlink.Q_uk.copy())
     Q_dks.append(superlink.Q_dk.copy())
 
+    H_j = np.vstack(H_js)
+
+    plt.clf()
+    plt.plot(times,H_j[:,0], label='Inlet 1')
+    plt.plot(times,H_j[:,1], label='Inlet 2')
+    plt.plot(times,H_j[:,2], label='Inlet 3')
+    plt.plot(times,H_j[:,3], label='Inlet 4')
+    plt.plot(times,H_j[:,4], label='Outlet')
+    plt.legend()
+    plt.title('Head at junctions')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Head (m)')
+    plt.pause(0.01)
+
+
+
 H_j = np.vstack(H_js)
 
-plt.show()
 
 plt.plot(times,H_j[:,0], label='Inlet 1')
 plt.plot(times,H_j[:,1], label='Inlet 2')
@@ -246,20 +290,25 @@ plt.legend()
 plt.title('Head at junctions')
 plt.xlabel('Time (s)')
 plt.ylabel('Head (m)')
+plt.savefig('Figure_01.png')
 plt.show()
 
 plt.plot(times,losses)
 plt.title('losses (total_volume_real - total_volume_correct)')
+plt.savefig('Figure_02.png')
 plt.show()
 
 plt.plot(times,Q_iks)
 plt.title('Link flows (m^3/s)')
+plt.savefig('Figure_03.png')
 plt.show()
 
 plt.plot(times,Q_uks)
 plt.title('Flows into upstream ends of superlinks (m^3/s) ')
+plt.savefig('Figure_04.png')
 plt.show()
 
 plt.plot(times,Q_dks)
 plt.title('Flows into downstream ends of superlinks (m^3/s) ')
+plt.savefig('Figure_05.png')
 plt.show()
