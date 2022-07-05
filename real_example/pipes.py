@@ -179,7 +179,7 @@ Q_dks =[]
 times =[]
 
 Q_in_old = np.zeros_like(anuga_elevs)
-time_average = 10 # sec
+#time_average = 10 # sec
 
 for t in domain.evolve(yieldstep=dt, finaltime=ft):
     #print('\n')
@@ -213,8 +213,8 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
 
 
     # average it out
-    Q_in = ((time_average - dt)*Q_in_old + dt*Q_in)/time_average
-    Q_in_old = Q_in
+    #Q_in = ((time_average - dt)*Q_in_old + dt*Q_in)/time_average
+    #Q_in_old = Q_in
 
     #Q_in = np.where(superlink.H_j <= anuga_stages,
     #               C_w * L_w * np.sqrt(anuga_depths) * anuga_depths, 0.0 )
@@ -254,7 +254,7 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     
 
     if domain.yieldstep_counter%domain.output_frequency == 0:
-        print('boundary flow', boundary_flow)
+        print('   loss', loss)
 
     # Append data
     times.append(t)
