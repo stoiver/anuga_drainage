@@ -17,9 +17,11 @@ from anuga import Rate_operator
 #------------------------------------------------------------------------------
 
 basename = 'terrain'
-outname = 'boyd_pipe'
+outname = 'anuga_boyd_culvert'
 meshname = 'terrain.msh'
 
+dt = 1.0
+ft = 400.0
 
 W=296600.
 N=6180070.
@@ -104,8 +106,8 @@ domain.set_boundary({'west': Bd, 'south': Br, 'north': Bd, 'east': Bd})
 import time
 t0 = time.time()
 
-for t in domain.evolve(yieldstep = 1, finaltime = 4000):
-    print (domain.timestepping_statistics())
-    print (domain.boundary_statistics(quantities='stage'))  
+for t in domain.evolve(yieldstep = dt, finaltime = ft):
+    domain.print_timestepping_statistics()
+    domain.print_boundary_statistics(quantities='stage')  
 
 print ('Finished')

@@ -16,10 +16,10 @@ import numpy as np
 #------------------------------------------------------------------------------
 
 basename = 'terrain'
-outname = 'pipedream'
+outname = 'anuga_pipedream_culvert'
 meshname = 'terrain.msh'
 
-dt = 0.1      # yield step
+dt = 0.01      # yield step
 out_dt = 1.0  # output step
 ft = 400      # final timestep
 
