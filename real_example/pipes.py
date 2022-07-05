@@ -182,8 +182,10 @@ Q_in_old = np.zeros_like(anuga_elevs)
 time_average = 10 # sec
 
 for t in domain.evolve(yieldstep=dt, finaltime=ft):
-    print('\n')
-    domain.print_timestepping_statistics()
+    #print('\n')
+    if domain.yieldstep_counter%domain.output_frequency == 0:
+        domain.print_timestepping_statistics()
+
     #print(domain.volumetric_balance_statistics())
 
     anuga_depths = np.array([inlet1_anuga_inlet_op.inlet.get_average_depth(),
@@ -217,13 +219,14 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     #Q_in = np.where(superlink.H_j <= anuga_stages,
     #               C_w * L_w * np.sqrt(anuga_depths) * anuga_depths, 0.0 )
 
-                    
-    print(anuga_depths)
-    print(anuga_elevs)
-    print(anuga_stages)
-    
-    print(superlink.H_j)
-    print(Q_in)
+
+    if domain.yieldstep_counter%domain.output_frequency == 0:    
+        print(anuga_depths)
+        print(anuga_elevs)
+        print(anuga_stages)
+        
+        print(superlink.H_j)
+        print(Q_in)
 
  
     # Simulate sewer with flow input
@@ -250,7 +253,8 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     loss = total_volume_real - total_volume_correct
     
 
-    print('boundary flow', boundary_flow)
+    if domain.yieldstep_counter%domain.output_frequency == 0:
+        print('boundary flow', boundary_flow)
 
     # Append data
     times.append(t)
@@ -264,17 +268,18 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
 
     H_j = np.vstack(H_js)
 
-    plt.clf()
-    plt.plot(times,H_j[:,0], label='Inlet 1')
-    plt.plot(times,H_j[:,1], label='Inlet 2')
-    plt.plot(times,H_j[:,2], label='Inlet 3')
-    plt.plot(times,H_j[:,3], label='Inlet 4')
-    plt.plot(times,H_j[:,4], label='Outlet')
-    plt.legend()
-    plt.title('Head at junctions')
-    plt.xlabel('Time (s)')
-    plt.ylabel('Head (m)')
-    plt.pause(0.01)
+    if domain.yieldstep_counter%domain.output_frequency == 0:
+        plt.clf()
+        plt.plot(times,H_j[:,0], label='Inlet 1')
+        plt.plot(times,H_j[:,1], label='Inlet 2')
+        plt.plot(times,H_j[:,2], label='Inlet 3')
+        plt.plot(times,H_j[:,3], label='Inlet 4')
+        plt.plot(times,H_j[:,4], label='Outlet')
+        plt.legend()
+        plt.title('Head at junctions')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Head (m)')
+        plt.pause(0.01)
 
 
 
