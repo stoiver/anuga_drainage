@@ -16,7 +16,7 @@ outname =  'anuga_pipedream_simple_culvert'
 
 rf = 2  # refinement factor for domain
 
-dt = 0.2     # yield step
+dt = 0.01     # yield step
 out_dt = 2.0 # output step
 ft = 400     # final timestep
 
@@ -124,7 +124,7 @@ superlinks = pd.DataFrame({'name': [0],
                            'dx': [10],
                            'n': 1*[0.013],
                            'shape': 1*['rect_closed'],
-                           'g1': 1*[0.1],
+                           'g1': 1*[1.0],
                            'g2': 1*[10.0],
                            'g3': 1*[0.1],
                            'g4': 1*[0.],
