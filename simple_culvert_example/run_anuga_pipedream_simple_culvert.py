@@ -14,7 +14,8 @@ import numpy as np
 basename = 'simple_culvert'
 outname =  'anuga_pipedream_simple_culvert'
 
-rf = 2  # refinement factor for domain
+
+rf = 20  # refinement factor for domain, if too coarse the inlets will overlap the wall
 
 dt = 0.01     # yield step
 out_dt = 2.0 # output step
@@ -26,7 +27,7 @@ verbose = False
 # CREATING MESH
 #------------------------------------------------------------------------------
 
-domain = anuga.rectangular_cross_domain(60*rf,20*rf, len1=60, len2=20)
+domain = anuga.rectangular_cross_domain(3*rf, rf, len1=60, len2=20)
 
 #------------------------------------------------------------------------------
 # SETUP COMPUTATIONAL DOMAIN
@@ -70,11 +71,26 @@ Bd = anuga.Dirichlet_boundary([-1.0,0,0])
 domain.set_boundary({'left': Bd, 'bottom': Br, 'top': Br, 'right': Br})
 
 
-inlet1_anuga_region = anuga.Region(domain, polygon=[[20.0,5.0], [22.0, 5.0], [22.0, 15.0], [20.0, 15.0]])
+#------------------------------------------------------------------------------
+# SETUP ANUGA INLETS FOR COUPLING
+#------------------------------------------------------------------------------
+
+print('Setup anuga inflw inlet')
+
+input_Q = 1.0
+line=[[59.0, 5.0],[59.0, 15.0]]
+anuga.Inlet_operator(domain, line, input_Q)
+
+#------------------------------------------------------------------------------
+# SETUP ANUGA INLETS FOR COUPLING
+#------------------------------------------------------------------------------
+
+print('Setup anuga inlets for coupling')
+inlet1_anuga_region = anuga.Region(domain, polygon=[[20.0,5.0], [22.0, 5.0], [22.0, 15.], [20.0, 15.0]])
 outlet_anuga_region = anuga.Region(domain, polygon=[[8.0,5.0], [10.0, 5.0], [10.0, 15.0], [8.0, 15.0]])
 
-anuga_Lweirs = np.array([20.0, 20.0])
-anuga_Amanholes = np.array([20.0, 20.0])
+anuga_length_weirs = np.array([20.0, 20.0])
+anuga_area_manholes = np.array([20.0, 20.0])
 
 inlet1_anuga_inlet_op = anuga.Inlet_operator(domain, inlet1_anuga_region, Q=0.0, zero_velocity=True)
 outlet_anuga_inlet_op = anuga.Inlet_operator(domain, outlet_anuga_region, Q=0.0, zero_velocity=False)
@@ -82,12 +98,7 @@ outlet_anuga_inlet_op = anuga.Inlet_operator(domain, outlet_anuga_region, Q=0.0,
 anuga_beds = np.array([inlet1_anuga_inlet_op.inlet.get_average_elevation(),
                        outlet_anuga_inlet_op.inlet.get_average_elevation()])
 
-print(anuga_beds)
-
-
-input_Q = 1.0
-line=[[59.0, 5.0],[59.0, 15.0]]
-anuga.Inlet_operator(domain, line, input_Q)
+print('anuga beds', anuga_beds)
 
 #------------------------------------------------------------------------------
 # PIPEDREAM
@@ -152,38 +163,7 @@ anuga_ws = []
 Q_ins = []
 
 
-
-def Calculate_Q(head1D, depth2D, bed2D, Lweir, Amanhole, cw=0.67, co=0.67):
-    """
-    Reference:
-    A methodology for linking 2D overland flow models with the sewer network model SWMM 5.1 
-    based on dynamic link libraries
-    Leandro, Jorge, Martins, Ricardo
-    Water Science and Technology
-    2016, 73, 3017-3026
-
-    cw is the weir discharge coefficient, 
-    w is the weir crest width [m], 
-    Amh is the manhole area [m2] 
-    co is the orifice discharge coefficient.
-
-    """
-
-    import numpy as np
-    from anuga import g
-
-    Q = np.zeros_like(head1D)
-
-    # if head1D < bed2D use Weir Equation (Reference Equation (10)):
-    Q = np.where(head1D<bed2D, cw*Lweir*depth2D*np.sqrt(2*g*depth2D), Q)
-
-    # If head1D > bed2D and  head1D < (depth2D + bed2d) use orifice equation (Equation (11))
-    Q = np.where(np.logical_and(bed2D<=head1D, head1D<depth2D+bed2D) , co*Amanhole*np.sqrt(2*g*(depth2D+bed2D-head1D)), Q)
-
-    # Otherwise if h1d >= h2d + Z2d use orifice equation (Equation (11)) surcharge
-    Q = np.where(head1D>=depth2D+bed2D,  -co*Amanhole*np.sqrt(2*g*(head1D-depth2D-bed2D)), Q)
-
-    return Q
+from coupling import calculate_Q
 
 #---------------------------------------------------------------------------
 print('Start Evolve')
@@ -243,7 +223,7 @@ for t in domain.evolve(yieldstep=dt, outputstep=out_dt, finaltime=ft):
 
         
     # Calculate discharge at inlets and smooth its response
-    Q_in = Calculate_Q(superlink.H_j, anuga_depths, anuga_beds, anuga_Lweirs, anuga_Amanholes)
+    Q_in = calculate_Q(superlink.H_j, anuga_depths, anuga_beds, anuga_length_weirs, anuga_area_manholes)
 
     Q_in = ((time_average - dt)*Q_in_old + dt*Q_in)/time_average
     Q_in_old = Q_in
@@ -255,7 +235,7 @@ for t in domain.evolve(yieldstep=dt, outputstep=out_dt, finaltime=ft):
     
     # Simulate sewer with flow input (or outflow)
     superlink.step(Q_in=Q_in, dt=dt)
-    superlink.reposition_junctions()
+    #superlink.reposition_junctions()
 
     # And consequently set anuga sim with flow output (or inflow)
     inlet1_anuga_inlet_op.set_Q(-Q_in[0])
