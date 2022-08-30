@@ -1,3 +1,16 @@
+"""
+Simple example of using swmm to model a culvert
+
+We are coupling via weir and orifice equation 
+(checkout coupling module)
+
+To control oscilations we seem to need small routing_step
+set in swmm_input.inp and smoothing of the calcuated
+Q. At present step to 10secs"""
+
+
+
+
 #------------------------------------------------------------------------------
 # IMPORT NECESSARY MODULES
 #------------------------------------------------------------------------------
@@ -16,9 +29,12 @@ outname =  'anuga_swmm_simple_culvert'
 
 rf = 20  # refinement factor for domain, if too coarse the inlets will overlap the wall
 
-dt = 1.0     # yield step
-out_dt = 2.0 # output step
-ft = 10      # final timestep
+dt = 0.1     # yield step
+out_dt = 1.0 # output step
+ft = 400     # final timestep
+
+# slow the response of the coupling calculation
+time_average = 10 # sec
 
 verbose   = False
 visualise = False
@@ -131,16 +147,21 @@ Q_ins = []
 from coupling import calculate_Q
 
 #---------------------------------------------------------------------------
+print('Average Q calculation')
+#---------------------------------------------------------------------------
+
+Q_in_old = np.array([0.0, 0.0])
+
+#---------------------------------------------------------------------------
 print('Start Evolve')
 #---------------------------------------------------------------------------
 
-# slow the response of the coupling calculation
-time_average = dt # sec
-Q_in_old = np.array([0.0, 0.0])
-
-for t in domain.evolve(yieldstep=dt, outputstep=dt, finaltime=ft):
+for t in domain.evolve(yieldstep=dt, outputstep=out_dt, finaltime=ft):
     #print('\n')
-    if domain.yieldstep_counter%domain.output_frequency == 0:
+    print_out = domain.yieldstep_counter%domain.output_frequency == 0
+    #print_out = True
+
+    if print_out:
         domain.print_timestepping_statistics()
 
     anuga_depths = np.array([inlet1_anuga_inlet_op.inlet.get_average_depth(),
@@ -151,7 +172,7 @@ for t in domain.evolve(yieldstep=dt, outputstep=dt, finaltime=ft):
 
 
     # FIXME: Compute the water volumes in the swmm model
-    link_volume = 0.0
+    link_volume = swmm_culvert.volume + swmm_outpipe.volume
     node_volume = 0.0
     sewer_volume = link_volume + node_volume
 
@@ -161,15 +182,7 @@ for t in domain.evolve(yieldstep=dt, outputstep=dt, finaltime=ft):
     total_volume_real = domain.get_water_volume() + sewer_volume
     loss = total_volume_real - total_volume_correct
 
-    if domain.yieldstep_counter%domain.output_frequency == 0:
-        print('    Loss         ', loss)
-        print('    TV correct   ', total_volume_correct)
-        print('    domain volume', domain.get_water_volume())
-        print('    node_volume  ', node_volume)
-        print('    sewer_volume ', sewer_volume)
-        print('    anuga_depths ', anuga_depths)
-        print('    anuga_beds   ', anuga_beds)
-        print('    anuga_stages ', anuga_stages)
+
 
     # Append data
     time_series.append(t)
@@ -186,17 +199,37 @@ for t in domain.evolve(yieldstep=dt, outputstep=dt, finaltime=ft):
     outlet_invert = swmm_outlet.invert_elevation
     outfall_invert = swmm_outfall.invert_elevation
 
-    if domain.yieldstep_counter%domain.output_frequency == 0:
-        print('    Inlet Head   ', inlet_head)
-        print('    Outlet Head  ', outlet_head)
-        print('    Outfall Head ', outfall_head)
-        print('    Inlet invert   ', inlet_invert)
-        print('    Outlet invert  ', outlet_invert)
-        print('    Outfall invert ', outfall_invert)
+    
+
+    if print_out:    
+        print('    swmm/anuga time  ', sim.current_time, t)
+        print('    Loss             ', loss)
+        print('    TV correct       ', total_volume_correct)
+        print('    domain volume    ', domain.get_water_volume())
+        print('    node_volume      ', node_volume)
+        print('    sewer_volume     ', sewer_volume)
+        print('    anuga_depths     ', anuga_depths)
+        print('    anuga_beds       ', anuga_beds)
+        print('    anuga_stages     ', anuga_stages)        
+        print('    Inlet Head       ', inlet_head)
+        print('    Outlet Head      ', outlet_head)
+        print('    Outfall Head     ', outfall_head)
+        print('    Inlet invert     ', inlet_invert)
+        print('    Outlet invert    ', outlet_invert)
+        print('    Outfall invert   ', outfall_invert)
+        print('    Inlet flooding   ', swmm_inlet.flooding)
+        print('    Inlet depth      ', swmm_inlet.depth)
+        print('    Inlet volume     ', swmm_inlet.volume)
+        print('    Inlet surcharge  ', swmm_inlet.surcharge_depth)
+        print('    Inlet lat inflow ', swmm_inlet.lateral_inflow)
+        print('    Inlet tot inflow ', swmm_inlet.total_inflow)
+        print('    Inlet tot outflow', swmm_inlet.total_outflow)
+
+
+
 
     node_heads = np.array([inlet_head, outlet_head])
-
-        
+    
     # Calculate discharge at inlets and smooth its response
     Q_in = calculate_Q(node_heads, anuga_depths, anuga_beds, anuga_length_weirs, anuga_area_manholes)
 
@@ -205,9 +238,9 @@ for t in domain.evolve(yieldstep=dt, outputstep=dt, finaltime=ft):
 
     Q_ins.append(Q_in.copy())
 
-    if domain.yieldstep_counter%domain.output_frequency == 0:
-        print('    Q            ', Q_in)
-    
+    if print_out:
+        print('    Calculated Q     ', Q_in[0], Q_in[1]) 
+
     # Simulate sewer with flow input (or outflow)
     swmm_inlet.generated_inflow(Q_in[0])
     swmm_outlet.generated_inflow(Q_in[1])
@@ -215,18 +248,7 @@ for t in domain.evolve(yieldstep=dt, outputstep=dt, finaltime=ft):
     #print(sim.current_time)
     sim.next()
 
-    # determine how much actually flowed into 1D model
-
-    if domain.yieldstep_counter%domain.output_frequency == 0:    
-        print('    Inlet flooding ', swmm_inlet.flooding)
-        print('    Inlet depth    ', swmm_inlet.depth)
-        print('    Inlet volume   ', swmm_inlet.volume)
-        print('    Inlet surcharge', swmm_inlet.surcharge_depth)
-
-        print('    Inlet lat inflow', swmm_inlet.lateral_inflow)
-        print('    Inlet gen inflow', Q_in[0])
-        print('    Inlet tot inflow', swmm_inlet.total_inflow)
-        print('    Inlet tot outflow', swmm_inlet.total_outflow)
+    # TODO: determine how much actually flowed into 1D model
 
     # And consequently set anuga sim with flow output (or inflow)
     inlet1_anuga_inlet_op.set_Q(-Q_in[0])

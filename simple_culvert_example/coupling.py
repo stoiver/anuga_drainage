@@ -1,7 +1,7 @@
 
 
 
-def calculate_Q(head1D, depth2D, bed2D, length_weir, area_manhole, cw=0.67, co=0.67):
+def calculate_Q(head1D, depth2D, bed2D, length_weir, area_manhole, cw=0.67, co=0.67, eps=1e-14):
     """
     Routine to calculate coupling discharge between 2D and 1D models
 
@@ -24,22 +24,24 @@ def calculate_Q(head1D, depth2D, bed2D, length_weir, area_manhole, cw=0.67, co=0
     import numpy as np
     from anuga import g
 
-    Q = np.zeros_like(head1D)
+    with np.errstate(invalid='ignore'):
+        Q = np.zeros_like(head1D)
 
-    print(Q)
-    # if head1D < bed2D use Weir Equation (Reference Equation (10)):
-    Q = np.where(head1D<bed2D, cw*length_weir*depth2D*np.sqrt(2*g*depth2D), Q)
+        #print(Q)
+        # if head1D < bed2D use Weir Equation (Reference Equation (10)):
+        Q = np.where(head1D<bed2D, cw*length_weir*depth2D*np.sqrt(2*g*depth2D), Q)
 
-    print(Q)
-    # If head1D > bed2D and  head1D < (depth2D + bed2D) use orifice equation (Equation (11))
-    Q = np.where(np.logical_and(bed2D<=head1D, head1D<depth2D+bed2D) , co*area_manhole*np.sqrt(2*g*(depth2D+bed2D-head1D)), Q)
+        #print(Q)
+        # If head1D > bed2D and  head1D < (depth2D + bed2D) use orifice equation (Equation (11))
+        Q = np.where(np.logical_and(bed2D<=head1D, head1D<depth2D+bed2D) , co*area_manhole*np.sqrt(2*g*(depth2D+bed2D-head1D)), Q)
 
-    print(Q)
+        #print(Q)
 
-    print(head1D,depth2D, bed2D)
-    print(head1D-depth2D-bed2D)
-    # Otherwise if h1d >= (depth2D + bed2D) use orifice equation (Equation (11)) surcharge
-    Q = np.where(head1D>depth2D+bed2D,  -co*area_manhole*np.sqrt(2*g*(head1D-depth2D-bed2D)), Q)
-    print(Q)
+        #print(head1D,depth2D, bed2D)
+        #print(head1D-depth2D-bed2D)
+        
+        # Otherwise if h1d >= (depth2D + bed2D) use orifice equation (Equation (11)) surcharge
+        Q = np.where(head1D>depth2D+bed2D+eps,  -co*area_manhole*np.sqrt(2*g*(head1D-depth2D-bed2D)), Q)
+        #print(Q)
 
     return Q

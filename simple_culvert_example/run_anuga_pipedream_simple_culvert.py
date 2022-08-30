@@ -1,14 +1,12 @@
 #------------------------------------------------------------------------------
-# IMPORT NECESSARY MODULES
+print('IMPORT NECESSARY MODULES')
 #------------------------------------------------------------------------------
-print (' ABOUT to Start Simulation:- Importing Modules')
-
 
 import anuga
 import numpy as np
 
 #------------------------------------------------------------------------------
-# FILENAMES, MODEL DOMAIN and VARIABLES
+print('FILENAMES, MODEL DOMAIN and VARIABLES')
 #------------------------------------------------------------------------------
 
 basename = 'simple_culvert'
@@ -17,21 +15,17 @@ outname =  'anuga_pipedream_simple_culvert'
 
 rf = 20  # refinement factor for domain, if too coarse the inlets will overlap the wall
 
-dt = 0.01     # yield step
-out_dt = 2.0 # output step
+dt = 0.05     # yield step
+out_dt = 1.0 # output step
 ft = 400     # final timestep
 
 verbose = False
 
-#------------------------------------------------------------------------------
-# CREATING MESH
-#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
+print('SETUP COMPUTATIONAL DOMAIN')
+#------------------------------------------------------------------------------
 domain = anuga.rectangular_cross_domain(3*rf, rf, len1=60, len2=20)
-
-#------------------------------------------------------------------------------
-# SETUP COMPUTATIONAL DOMAIN
-#------------------------------------------------------------------------------
 domain.set_minimum_storable_height(0.0001) 
 domain.set_name(outname) 
 print (domain.statistics())
@@ -60,7 +54,7 @@ domain.set_quantity('elevation', topography, location='centroids')
 domain.set_quantity('friction', 0.035)
 
 #------------------------------------------------------------------------------
-# SETUP BOUNDARY CONDITIONS
+print('SETUP BOUNDARY CONDITIONS')
 #------------------------------------------------------------------------------
 
 print ('Available boundary tags', domain.get_boundary_tags())
@@ -72,17 +66,15 @@ domain.set_boundary({'left': Bd, 'bottom': Br, 'top': Br, 'right': Br})
 
 
 #------------------------------------------------------------------------------
-# SETUP ANUGA INLETS FOR COUPLING
+print('SETUP ANUGA INFLOW INLET')
 #------------------------------------------------------------------------------
-
-print('Setup anuga inflw inlet')
 
 input_Q = 1.0
 line=[[59.0, 5.0],[59.0, 15.0]]
 anuga.Inlet_operator(domain, line, input_Q)
 
 #------------------------------------------------------------------------------
-# SETUP ANUGA INLETS FOR COUPLING
+print('SETUP ANUGA INLETS FOR COUPLING')
 #------------------------------------------------------------------------------
 
 print('Setup anuga inlets for coupling')
@@ -101,7 +93,7 @@ anuga_beds = np.array([inlet1_anuga_inlet_op.inlet.get_average_elevation(),
 print('anuga beds', anuga_beds)
 
 #------------------------------------------------------------------------------
-# PIPEDREAM
+print('Setup PIPEDREAM')
 #------------------------------------------------------------------------------
 
 print('Setup pipedream structures')
@@ -150,7 +142,7 @@ superlink = SuperLink(superlinks, superjunctions, internal_links=6)
 
 
 #--------------------------------------------------------------------------
-# Setup storage for output
+print('Setup storage for output')
 #--------------------------------------------------------------------------
 H_js = []
 losses = []
@@ -166,13 +158,16 @@ Q_ins = []
 from coupling import calculate_Q
 
 #---------------------------------------------------------------------------
-print('Start Evolve')
+print('Set time averaging of Q')
 #---------------------------------------------------------------------------
 
 # slow the response of the coupling calculation
-time_average = 10 # sec
+time_average = 1 # sec
 Q_in_old = np.array([0.0, 0.0])
 
+#---------------------------------------------------------------------------
+print('Start Evolve')
+#---------------------------------------------------------------------------
 for t in domain.evolve(yieldstep=dt, outputstep=out_dt, finaltime=ft):
     #print('\n')
     if domain.yieldstep_counter%domain.output_frequency == 0:
