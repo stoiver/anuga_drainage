@@ -23,7 +23,7 @@ DRY_DAYS             0
 REPORT_STEP          00:01:00
 WET_STEP             00:05:00
 DRY_STEP             01:00:00
-ROUTING_STEP         0.1 sec
+ROUTING_STEP         0.2
 INERTIAL_DAMPING     NONE
 NORMAL_FLOW_LIMITED  BOTH
 FORCE_MAIN_EQUATION  D-W
@@ -34,7 +34,7 @@ MAX_TRIALS           0
 HEAD_TOLERANCE       0
 SYS_FLOW_TOL         5
 LAT_FLOW_TOL         5
-MINIMUM_STEP         0.1
+MINIMUM_STEP         1
 THREADS              1
 
 [EVAPORATION]
@@ -52,25 +52,25 @@ Outlet             0.03      1.0          0          0.15       1
 [OUTFALLS]
 ;;Name           Elevation  Type       Stage Data       Gated    Route To
 ;;-------------- ---------- ---------- ---------------- -------- ----------------
-Outfall            0.0       FREE                        NO
+Outfall            0.02       FREE                        NO
 
 [CONDUITS]
 ;;Name           From Node        To Node          Length     Roughness  InOffset   OutOffset  InitFlow   MaxFlow
 ;;-------------- ---------------- ---------------- ---------- ---------- ---------- ---------- ---------- ----------
 Culvert              Inlet         Outlet           11.0         0.013      0          0          0          10
-Outpipe              Outlet        Outfall          10.0         0.013      0          0          0          10
+Outpipe              Outlet        Outfall          5.0          0.013      0          0          0          10
 
 [XSECTIONS]
 ;;Link           Shape        Geom1            Geom2      Geom3      Geom4      Barrels    Culvert
 ;;-------------- ------------ ---------------- ---------- ---------- ---------- ---------- ----------
-Culvert           RECT_OPEN     1                 10          0          0          1
-Outpipe           CIRCULAR     0.1                0          0          0          1
+Culvert           RECT_OPEN     1.0                1          0          0          1
+Outpipe           CIRCULAR      0.1                0          0          0          1
 
 [LOSSES]
 ;;Link           Kentry     Kexit      Kavg       Flap Gate  Seepage
 ;;-------------- ---------- ---------- ---------- ---------- ----------
-Culvert              0       0         0          NO         0
-Outpipe              0       0          0          NO         0
+Culvert              0       0         0           NO         0
+Outpipe              0       0         0           NO         0
 
 [REPORT]
 ;;Reporting Options
@@ -90,9 +90,9 @@ Units      None
 [COORDINATES]
 ;;Node           X-Coord            Y-Coord
 ;;-------------- ------------------ ------------------
-Inlet            22.00               10.0
+Inlet            21.00               10.0
 Outlet           9.0                 10.0
-Outfall          1.0                 10.0
+Outfall          9.0                 10.0
 
 [VERTICES]
 ;;Link           X-Coord            Y-Coord
