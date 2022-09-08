@@ -63,7 +63,7 @@ Outpipe              Outlet        Outfall          5.0          0.013      0   
 [XSECTIONS]
 ;;Link           Shape        Geom1            Geom2      Geom3      Geom4      Barrels    Culvert
 ;;-------------- ------------ ---------------- ---------- ---------- ---------- ---------- ----------
-Culvert           RECT_OPEN     1.0                1          0          0          1
+Culvert           RECT_OPEN     1.0                10          0          0          1
 Outpipe           CIRCULAR      0.1                0          0          0          1
 
 [LOSSES]

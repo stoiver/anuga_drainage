@@ -21,7 +21,7 @@ print('SETUP FILENAMES, MODEL DOMAIN and VARIABLES')
 #------------------------------------------------------------------------------
 
 basename = 'simple_culvert'
-outname =  'anuga_swmm_simple_culvert'
+outname =  'anuga_swmm_short_simple_culvert'
 
 rf = 20  # refinement factor for domain, if too coarse the inlets will overlap the wall
 
@@ -91,23 +91,29 @@ domain.set_boundary({'left': Bd, 'bottom': Br, 'top': Br, 'right': Br})
 print('SETUP ANUGA Inlet_operators to support coupling with stormwater system')
 #------------------------------------------------------------------------------
 
-# inlets across full channel. Make sure to set the culvert in the swmm_simple.inp to a value of 
-# width 10.0m
-inlet1_anuga_region = anuga.Region(domain, polygon=[[20.0,5.0], [22.0, 5.0], [22.0, 15.0], [20.0, 15.0]])
-outlet_anuga_region = anuga.Region(domain, polygon=[[8.0,5.0], [10.0, 5.0], [10.0, 15.0], [8.0, 15.0]])
-outfall_anuga_region = anuga.Region(domain, polygon=[[1.0,5.0], [2.0, 5.0], [2.0, 15.0], [1.0, 15.0]])
 
-anuga_length_weirs = np.array([20.0, 20.0])
-anuga_area_manholes = np.array([20.0, 20.0])
+# Make sure to set the culvert width in the swmm_simple_short_culvert.inp. For full channel set
+# cw = 8
+# For small inlets in centre of channel set
+# cw = 2.0
+# In the future all this info will be extracted from the appropriate swmm input file. 
+# QUESTION SR: Does the swmm inp file have enough info to create inlet regions?
 
-# small inlets in centre of channel. Make sure to set the culvert in the swmm_simple.inp to a value of 
-# width 1.0m
-inlet1_anuga_region = anuga.Region(domain, polygon=[[20.0,9.0], [22.0, 9.0], [22.0, 11.0], [20.0, 11.0]])
-outlet_anuga_region = anuga.Region(domain, polygon=[[8.0,9.0], [10.0, 9.0], [10.0, 11.0], [8.0, 11.0]])
-outfall_anuga_region = anuga.Region(domain, polygon=[[1.0,9.0], [2.0, 9.0], [2.0, 11.0], [1.0, 11.0]])
 
-anuga_length_weirs = np.array([4.0, 4.0])
-anuga_area_manholes = np.array([4.0, 4.0])
+cw = 8
+
+inlet_polygon = [[20.0, 10-cw/2], [22.0, 10-cw/2], [22.0, 10+cw/2], [20.0, 10+cw/2]]
+inlet1_anuga_region = anuga.Region(domain, polygon=inlet_polygon)
+
+outlet_polygon = [[8.0, 10-cw/2], [10.0, 10-cw/2], [10.0, 10+cw/2], [8.0, 10+cw/2]]
+outlet_anuga_region = anuga.Region(domain, polygon=outlet_polygon)
+
+outfall_polygon = [[1.0, 10-cw/2], [2.0, 10-cw/2], [2.0, 10+cw/2], [1.0, 10+cw/2]]
+outfall_anuga_region = anuga.Region(domain, polygon=outfall_polygon)
+
+anuga_length_weirs = np.array([2*cw, 2*cw])
+anuga_area_manholes = np.array([cw*2, cw*2])
+
 
 # now setup anuga Inlet_operators to remove or add water from anuga domain.
 inlet1_anuga_inlet_op = anuga.Inlet_operator(domain, inlet1_anuga_region, Q=0.0, zero_velocity=False)
@@ -129,7 +135,7 @@ from pyswmm import Simulation, Nodes, Links
 import matplotlib.pyplot as plt
 import pandas as pd
 
-sim = Simulation('./swmm_input.inp')
+sim = Simulation('./swmm_input_short_culvert.inp')
 sim.start()
 
 swmm_inlet = Nodes(sim)['Inlet']
