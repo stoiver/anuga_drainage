@@ -25,12 +25,12 @@ outname =  'anuga_swmm_short_simple_culvert'
 
 rf = 20  # refinement factor for domain, if too coarse the inlets will overlap the wall
 
-dt = 0.2     # yield step
+dt = 0.2     # yield step  (note that this can be larger than routing step set in the .inp file)
 out_dt = 1.0 # output step
 ft = 400     # final timestep
 
 # slow the response of the coupling calculation
-time_average = 10 # sec
+time_average = 10.0 # sec
 
 verbose   = False
 visualise = False
@@ -147,6 +147,8 @@ swmm_outpipe = Links(sim)['Outpipe']
 nodes = [swmm_inlet, swmm_outlet, swmm_outfall]
 links = [swmm_culvert, swmm_outpipe]
 
+swmm_inlet.statistics
+
 link_volume_0 = swmm_culvert.volume + swmm_outpipe.volume
 
 #--------------------------------------------------------------------------
@@ -197,6 +199,9 @@ for t in domain.evolve(yieldstep=dt, outputstep=out_dt, finaltime=ft):
     anuga_stages = np.array([inlet1_anuga_inlet_op.inlet.get_average_stage(),
                              outlet_anuga_inlet_op.inlet.get_average_stage()])
 
+    anuga_volumes = np.array([inlet1_anuga_inlet_op.inlet.get_total_water_volume(),
+                             outlet_anuga_inlet_op.inlet.get_total_water_volume()])
+
 
     # Compute the water volumes in the swmm model
     link_volume = swmm_culvert.volume + swmm_outpipe.volume
@@ -240,7 +245,8 @@ for t in domain.evolve(yieldstep=dt, outputstep=out_dt, finaltime=ft):
         print('    sewer_volume      :', sewer_volume)
         print('    anuga_depths      :', anuga_depths)
         print('    anuga_beds        :', anuga_beds)
-        print('    anuga_stages      :', anuga_stages)        
+        print('    anuga_stages      :', anuga_stages)
+        print('    anuga_volumes     :', anuga_volumes)        
 
         for node in nodes:
             print('   ', node.nodeid,' head         :', node.head)
@@ -269,6 +275,14 @@ for t in domain.evolve(yieldstep=dt, outputstep=out_dt, finaltime=ft):
     Q_in = calculate_Q(node_heads, anuga_depths, anuga_beds, anuga_length_weirs, anuga_area_manholes)
 
     Q_in = ((time_average - dt)*Q_in_old + dt*Q_in)/time_average
+
+
+    # if removing water from anuga, try to may sure there is enough water in the anuga model to allow this. 
+    safety_factor = 1.0
+    Q_limit = safety_factor*anuga_volumes/dt
+
+    Q_in = np.where(Q_in > 0, np.minimum(Q_in, Q_limit), Q_in)
+
     Q_in_old = Q_in
 
     Q_ins.append(Q_in.copy())
