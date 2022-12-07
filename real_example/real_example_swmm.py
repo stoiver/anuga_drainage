@@ -103,9 +103,7 @@ in_node_ids   = [node.nodeid for node in Nodes(sim) if node.is_junction()]
 n_in_nodes    = len(in_node_ids)
 
 ### Initialize inlet operators
-# NOTE this should be initialized from list of inlet areas perhaps
 inlet_area = np.full((n_in_nodes),1.167)
-print(f'inlet_area: {inlet_area}')
 Q_in_0     = n_in_nodes*[0.0]
 n_sides    = 6
 inlet_operators,inlet_elevation,weir_length,vertices = initialize_inlets(domain,sim,inp,n_sides,inlet_area,Q_in_0,rotation = 0)
@@ -130,7 +128,6 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
 
 
     if domain.yieldstep_counter%output_frequency == 0 and do_print:
-        print('###################')
         print('t = ',t)
 
     # Reset link volume at every iteration and sum volumes
@@ -166,12 +163,10 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     #     if node.is_junction():
     #         inlet_operators[node.nodeid].set_Q(-node.lateral_inflow + node.flooding)
 
-
     # ### Compute inlet flow using volumes
     inlet_vol = [- node.statistics['lateral_infow_vol'] + node.statistics['flooding_volume'] for node in Nodes(sim) if node.is_junction()]
     inlet_flow = [(new_vol - old_vol)/dt for new_vol,old_vol in zip(inlet_vol,old_inlet_vol)]
     old_inlet_vol = inlet_vol
-
 
     # Compute statistics and append data
 
@@ -207,5 +202,3 @@ if do_data_save:
 
     with open(pick, "wb") as f:
         pickle.dump(data, f)
-
-
