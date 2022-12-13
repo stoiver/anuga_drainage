@@ -106,13 +106,14 @@ n_in_nodes    = len(in_node_ids)
 inlet_area = np.full((n_in_nodes),1.167)
 Q_in_0     = n_in_nodes*[0.0]
 n_sides    = 6
-inlet_operators,inlet_elevation,weir_length,vertices = initialize_inlets(domain,sim,inp,n_sides,inlet_area,Q_in_0,rotation = 0)
+inlet_operators,inlet_elevation,poly_circumference,vertices = initialize_inlets(domain,sim,inp,n_sides,inlet_area,Q_in_0,rotation = 0)
+
+inlet_weir_length = 2*np.sqrt(np.pi*inlet_area)
+
 
 cumulative_inlet_flooding = np.array(n_in_nodes*[0.0])
 cumulative_inlet_flow     = np.array(n_in_nodes*[0.0])
 
-
-#NOTE maybe node volumes should be aquired from inp file Fetch node volumes from inp file
 node_volume    = sum(old_inlet_vol)
 node_heads     = []
 conduit_depths = []
@@ -135,12 +136,13 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     for link in Links(sim):
         link_volume += link.volume
 
-    conduit_depths.append(np.array([link.depth for link in Links(sim)]))
+    if do_data_save:
+        conduit_depths.append(np.array([link.depth for link in Links(sim)]))
 
     inlet_head_swmm   = np.array([node.head for node in Nodes(sim) if node.is_junction()])
     node_heads.append(inlet_head_swmm)
 
-    Q_in = calculate_Q(inlet_head_swmm, anuga_depths, inlet_elevation, weir_length, inlet_area) # inputs between manual and auto checked to be the same 20/09
+    Q_in = calculate_Q(inlet_head_swmm, anuga_depths, inlet_elevation, inlet_weir_length, inlet_area) # inputs between manual and auto checked to be the same 20/09
     Q_in = ((time_average - dt)*Q_in_old + dt*Q_in)/time_average
     Q_in_old = Q_in.copy()
     Q_ins.append(Q_in.copy())
@@ -152,24 +154,24 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     for node, Qin in zip(Nodes(sim), Q_in): # combine this for loop with calling the anuga since i can just call the inlet and flooding thing at the same time
         node.generated_inflow(Qin)
 
-    # NOTE current time off of ANUGA time by 1 time step
-    print(sim._advance_seconds)
     sim.step_advance(dt) 
     sim.next()
 
-
-    # Using flow methods methods
-    # for node in Nodes(sim):
-    #     if node.is_junction():
-    #         inlet_operators[node.nodeid].set_Q(-node.lateral_inflow + node.flooding)
-
-    # ### Compute inlet flow using volumes
+    ### Using flow methods methods
+    # inlet_flow = [-node.lateral_inflow + node.flooding ofr node in Nodes(sim) if node.is_junction()]
+    
+    ### Compute inlet flow using volumes
     inlet_vol = [- node.statistics['lateral_infow_vol'] + node.statistics['flooding_volume'] for node in Nodes(sim) if node.is_junction()]
     inlet_flow = [(new_vol - old_vol)/dt for new_vol,old_vol in zip(inlet_vol,old_inlet_vol)]
     old_inlet_vol = inlet_vol
 
     # Compute statistics and append data
-
+    inlet_idx = 0
+    for node in Nodes(sim):
+        if node.is_junction():
+            inlet_operators[node.nodeid].set_Q(inlet_flow[inlet_idx])
+            inlet_idx +=1
+            
     sewer_volume         = link_volume + node_volume
     domain_volume        = domain.get_water_volume()
     sewer_volume         = link_volume + node_volume
@@ -180,11 +182,11 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     loss = total_volume_real - total_volume_correct
     losses.append(loss)
 
-    inlet_flow = [-node.lateral_inflow + node.flooding for node in Nodes(sim) if node.is_junction()]
-    cumulative_inlet_flooding += np.array([node.flooding for node in Nodes(sim) if node.is_junction()])
-    cumulative_inlet_flow     += np.array(inlet_flow)*dt
+    if do_data_save:
+        cumulative_inlet_flooding += np.array([node.flooding for node in Nodes(sim) if node.is_junction()])
+        cumulative_inlet_flow     += np.array(inlet_flow)*dt
 
-    real_Qin_tmp = [inlet_operators[in_id].get_Q() for in_id in in_node_ids]
+        real_Qin_tmp = [inlet_operators[in_id].get_Q() for in_id in in_node_ids]
     times.append(t)
 
 sim.report()
