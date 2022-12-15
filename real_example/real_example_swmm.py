@@ -111,22 +111,23 @@ inlet_operators,inlet_elevation,poly_circumference,vertices = initialize_inlets(
 inlet_weir_length = 2*np.sqrt(np.pi*inlet_area)
 
 
-cumulative_inlet_flooding = np.array(n_in_nodes*[0.0])
-cumulative_inlet_flow     = np.array(n_in_nodes*[0.0])
-
 node_volume    = sum(old_inlet_vol)
 node_heads     = []
-conduit_depths = []
 times          = []
-Q_ins          = []
 losses         = []
 Q_in_old       = np.zeros_like(inlet_elevation)
+
+if do_data_save:
+    Q_ins          = []
+    conduit_depths = []
+    cumulative_inlet_flooding = np.array(n_in_nodes*[0.0])
+    cumulative_inlet_flow     = np.array(n_in_nodes*[0.0])
+
 
 wall_clock_start = time.time()
 sim.start()
 for t in domain.evolve(yieldstep=dt, finaltime=ft):
     anuga_depths = np.array([inlet_operators[in_id].inlet.get_average_depth() for in_id in in_node_ids])
-
 
     if domain.yieldstep_counter%output_frequency == 0 and do_print:
         print('t = ',t)
@@ -145,7 +146,8 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     Q_in = calculate_Q(inlet_head_swmm, anuga_depths, inlet_elevation, inlet_weir_length, inlet_area) # inputs between manual and auto checked to be the same 20/09
     Q_in = ((time_average - dt)*Q_in_old + dt*Q_in)/time_average
     Q_in_old = Q_in.copy()
-    Q_ins.append(Q_in.copy())
+    if do_data_save:
+        Q_ins.append(Q_in.copy())
 
     if domain.yieldstep_counter%output_frequency == 0 and do_print:
         print(f'Q_in = {Q_in}')
@@ -191,7 +193,7 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
 
 sim.report()
 sim.close()
-wall_clock_end = time.timeit()
+wall_clock_end = time.time()
 print('\n')
 print('Computation time: {0:0.1f} seconds'.format(wall_clock_end - wall_clock_start))
 print(f'Loss = {loss}')

@@ -1,0 +1,54 @@
+2022-12-15 12:13:00,741 INFO           anuga.utilities.log:0   |Logfile is './anuga.log' with logging level of INFO, console logging level is CRITICAL
+2022-12-15 12:13:00,742 CRITICAL            mesh_interface:108 |Resource usage: memory=1970.4MB resident=202.8MB stacksize=0.1MB
+2022-12-15 12:13:00,742 INFO                mesh_interface:108 |#@# sys_platform, linux
+2022-12-15 12:13:00,742 INFO                mesh_interface:108 |#@# start_memory, 1970.4296875
+2022-12-15 12:13:00,742 INFO                mesh_interface:108 |#@# start_resident, 202.796875
+2022-12-15 12:13:00,742 INFO                mesh_interface:108 |#@# start_stacksize, 0.1328125
+2022-12-15 12:13:00,743 INFO                mesh_interface:110 |#@# maximum_triangle_area, 0.1
+2022-12-15 12:13:00,743 INFO                mesh_interface:112 |#@# minimum_triangle_angle, 28.0
+2022-12-15 12:13:00,743 INFO                mesh_interface:115 |#@# startMesh, '2022-12-15 12:13:00'
+2022-12-15 12:13:00,743 CRITICAL            mesh_interface:192 |WARNING: Segment 13 was not assigned a boundary_tag.Default tag "exterior" will be assigned to missing segment
+2022-12-15 12:13:00,744 CRITICAL            mesh_interface:373 |Generating mesh to file 'model/terrain.tsh'
+2022-12-15 12:13:01,675 CRITICAL            generic_domain:84  |Domain: Initialising
+2022-12-15 12:13:01,675 CRITICAL              pmesh2domain:99  |Pmesh_to_Domain: Initialising
+2022-12-15 12:13:01,879 CRITICAL              pmesh2domain:109 |Pmesh_to_Domain: Done
+2022-12-15 12:13:01,879 CRITICAL              general_mesh:90  |General_mesh: Building basic mesh structure
+2022-12-15 12:13:01,891 INFO                  general_mesh:97  |#@# numTriangles, 26135
+2022-12-15 12:13:01,910 CRITICAL              general_mesh:152 |General_mesh: Computing areas, normals, edgelengths, centroids and radii
+2022-12-15 12:13:01,914 CRITICAL              general_mesh:377 |General Mesh: Building inverted triangle structure
+2022-12-15 12:13:01,918 INFO                  general_mesh:380 |#@# aoi, '823.0027155085513'
+2022-12-15 12:13:01,918 CRITICAL            neighbour_mesh:94  |Mesh: Initialising
+2022-12-15 12:13:01,918 CRITICAL            neighbour_mesh:164 |Mesh: Building neigbour structure
+2022-12-15 12:13:01,939 CRITICAL            neighbour_mesh:168 |Mesh: Building surrogate neigbour structure
+2022-12-15 12:13:01,940 CRITICAL            neighbour_mesh:172 |Mesh: Building boundary dictionary
+2022-12-15 12:13:01,941 CRITICAL            neighbour_mesh:179 |Mesh: Building tagged elements dictionary
+2022-12-15 12:13:01,949 CRITICAL            neighbour_mesh:197 |Mesh: Done
+2022-12-15 12:13:01,949 INFO                neighbour_mesh:198 |#@# finishMesh, '2022-12-15 12:13:01'
+2022-12-15 12:13:01,949 INFO                neighbour_mesh:199 |Resource usage: memory=1997.9MB resident=230.9MB stacksize=0.1MB
+2022-12-15 12:13:01,949 INFO                neighbour_mesh:199 |#@# sys_platform, linux
+2022-12-15 12:13:01,950 INFO                neighbour_mesh:199 |#@# finishMesh_memory, 1997.94921875
+2022-12-15 12:13:01,950 INFO                neighbour_mesh:199 |#@# finishMesh_resident, 230.875
+2022-12-15 12:13:01,950 INFO                neighbour_mesh:199 |#@# finishMesh_stacksize, 0.1328125
+2022-12-15 12:13:01,950 CRITICAL            generic_domain:117 |Domain: Expose mesh attributes
+2022-12-15 12:13:01,950 CRITICAL            generic_domain:155 |Domain: Expose quantity names and types
+2022-12-15 12:13:01,950 CRITICAL            generic_domain:182 |Domain: Build Quantities
+2022-12-15 12:13:01,955 CRITICAL            generic_domain:228 |Domain: Set up communication buffers 
+2022-12-15 12:13:01,955 CRITICAL            generic_domain:245 |Domain: Set up triangle/node full flags 
+2022-12-15 12:13:01,956 CRITICAL            generic_domain:293 |Domain: Set defaults
+2022-12-15 12:13:01,956 CRITICAL            generic_domain:344 |Domain: Set work arrays
+2022-12-15 12:13:01,957 CRITICAL            generic_domain:362 |Domain: Initialising quantity values
+2022-12-15 12:13:01,957 CRITICAL            generic_domain:367 |Domain: Done
+2022-12-15 12:13:02,040 CRITICAL   general_fit_interpolate:115 |FitInterpolate: Building quad tree
+2022-12-15 12:13:02,051 CRITICAL                       fit:134 |Building smoothing matrix
+2022-12-15 12:13:02,090 CRITICAL           geospatial_data:185 |Geospatial_data: Created from file: model/terrain.csv
+2022-12-15 12:13:02,090 CRITICAL           geospatial_data:188 |Data will be loaded blockwise on demand
+2022-12-15 12:13:04,198 CRITICAL                       fit:343 |Fit.fit: Warning: no data points in fit
+2022-12-15 12:13:04,316 CRITICAL                  quantity:1299|Applying fitted data to domain
+2022-12-15 12:13:04,938 CRITICAL                       log:174 |
+Traceback (most recent call last):
+  File "pipes.py", line 234, in <module>
+    superlink.reposition_junctions()
+  File "/home/anton/Desktop/lnh_project/python_files/conda_env/lib/python3.8/site-packages/pipedream_solver/superlink.py", line 3546, in reposition_junctions
+    xx = _x_Ik.reshape(-1, njunctions)
+ValueError: cannot reshape array of size 84 into shape (5)
+
