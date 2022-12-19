@@ -187,8 +187,6 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     if do_data_save:
         cumulative_inlet_flooding += np.array([node.flooding for node in Nodes(sim) if node.is_junction()])
         cumulative_inlet_flow     += np.array(inlet_flow)*dt
-
-        real_Qin_tmp = [inlet_operators[in_id].get_Q() for in_id in in_node_ids]
     times.append(t)
 
 sim.report()
