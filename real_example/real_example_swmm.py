@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 from coupling import calculate_Q
 import time
-from utilities import initialize_inlets
+from utils.inlet_initialization import initialize_inlets
 
 time_average = 10 # sec
 dt           = 1.0     # yield step
@@ -124,7 +124,7 @@ if do_data_save:
     cumulative_inlet_flow     = np.array(n_in_nodes*[0.0])
 
 
-wall_clock_start = time.time()
+wall_clock_start = time.perf_counter()
 sim.start()
 for t in domain.evolve(yieldstep=dt, finaltime=ft):
     anuga_depths = np.array([inlet_operators[in_id].inlet.get_average_depth() for in_id in in_node_ids])
@@ -172,7 +172,7 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     for node in Nodes(sim):
         if node.is_junction():
             inlet_operators[node.nodeid].set_Q(inlet_flow[inlet_idx])
-            inlet_idx +=1
+            inlet_idx += 1
             
     sewer_volume         = link_volume + node_volume
     domain_volume        = domain.get_water_volume()
@@ -191,7 +191,7 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
 
 sim.report()
 sim.close()
-wall_clock_end = time.time()
+wall_clock_end = time.perf_counter()
 print('\n')
 print('Computation time: {0:0.1f} seconds'.format(wall_clock_end - wall_clock_start))
 print(f'Loss = {loss}')
