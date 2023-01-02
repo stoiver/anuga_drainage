@@ -14,9 +14,9 @@ import pickle
 from pyswmm import Simulation, Nodes, Links
 import matplotlib.pyplot as plt
 
-from coupling import calculate_Q
 import time
-from utils.inlet_initialization import initialize_inlets
+from coupling_functions.inlet_initialization import initialize_inlets
+from coupling_functions.coupling import calculate_Q
 
 time_average = 10 # sec
 dt           = 1.0     # yield step
@@ -90,8 +90,8 @@ domain.set_boundary({'inflow': Br, 'bottom': Br, 'outflow': Bd, 'top': Br})
 input1_anuga_region   = Region(domain, radius=1.0, center=(305694.91,6188013.94))
 input1_anuga_inlet_op = Inlet_operator(domain, input1_anuga_region, Q=input_rate) 
 
-sim = Simulation('/media/sf_shared_ubuntu/swmm_models/real_example2.inp')
-inp = SWMMInpFile("/media/sf_shared_ubuntu/swmm_models/real_example2.inp")
+sim = Simulation('real_example.inp')
+inp = SWMMInpFile('real_example.inp')
 
 link_volume_0 = 0
 for link in Links(sim): # Volumen er måske fysisk volumen af knuden og ikke hvor meget vand

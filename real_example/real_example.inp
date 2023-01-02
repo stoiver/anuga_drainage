@@ -16,24 +16,24 @@ START_TIME           00:00:00
 REPORT_START_DATE    09/08/2022
 REPORT_START_TIME    00:00:00
 END_DATE             09/08/2022
-END_TIME             06:00:00
-SWEEP_START          1/1
+END_TIME             06:00:01
+SWEEP_START          01/01
 SWEEP_END            12/31
 DRY_DAYS             0
-REPORT_STEP          00:15:00
+REPORT_STEP          00:00:01
 WET_STEP             00:05:00
 DRY_STEP             01:00:00
-ROUTING_STEP         0:00:20 
+ROUTING_STEP         0:00:01 
 RULE_STEP            00:00:00
 
-INERTIAL_DAMPING     PARTIAL
+INERTIAL_DAMPING     NONE
 NORMAL_FLOW_LIMITED  BOTH
 FORCE_MAIN_EQUATION  H-W
 VARIABLE_STEP        0.75
 LENGTHENING_STEP     0
-MIN_SURFAREA         0
-MAX_TRIALS           0
-HEAD_TOLERANCE       0
+MIN_SURFAREA         1.167
+MAX_TRIALS           8
+HEAD_TOLERANCE       0.0015
 SYS_FLOW_TOL         5
 LAT_FLOW_TOL         5
 MINIMUM_STEP         0.5
@@ -48,11 +48,10 @@ DRY_ONLY         NO
 [JUNCTIONS]
 ;;Name           Elevation  MaxDepth   InitDepth  SurDepth   Aponded   
 ;;-------------- ---------- ---------- ---------- ---------- ----------
-Inlet_1          37.5       0          0          0          1.12      
-Inlet_2          36.4       0          0          0          1.12      
-Inlet_3          34.5       0          0          0          1.12      
-Inlet_4          32.0       0          0          0          1.12      
-Outlet_1         32         0          0          0          0         
+Inlet_1          37.5       0          0          0          0.19635   
+Inlet_2          36.4       0          0          0          0.19635   
+Inlet_3          34.5       0          0          0          0.19635   
+Inlet_4          33.4       0          0          0          0.19635   
 
 [OUTFALLS]
 ;;Name           Elevation  Type       Stage Data       Gated    Route To        
@@ -65,17 +64,15 @@ Outfall_1        31         FREE                        NO
 Conduit_1        Inlet_1          Inlet_2          7.443      0.013      0          0          0          0         
 Conduit_2        Inlet_2          Inlet_3          10.251     0.013      0          0          0          0         
 Conduit_3        Inlet_3          Inlet_4          14.295     0.013      0          0          0          0         
-Conduit_4        Inlet_4          Outlet_1         24         0.013      0          0          0          0         
-Outlet_conduit   Outlet_1         Outfall_1        5          0.012      0          0          0          0         
+Conduit_4        Inlet_4          Outfall_1        24         0.013      0          0          0          0         
 
 [XSECTIONS]
 ;;Link           Shape        Geom1            Geom2      Geom3      Geom4      Barrels    Culvert   
 ;;-------------- ------------ ---------------- ---------- ---------- ---------- ---------- ----------
-Conduit_1        CIRCULAR     1                0          0          0          1                    
-Conduit_2        CIRCULAR     1                0          0          0          1                    
-Conduit_3        CIRCULAR     1                0          0          0          1                    
-Conduit_4        CIRCULAR     1                0          0          0          1                    
-Outlet_conduit   CIRCULAR     0.1              0          0          0          1                    
+Conduit_1        CIRCULAR     0.375            0          0          0          1                    
+Conduit_2        CIRCULAR     0.375            0          0          0          1                    
+Conduit_3        CIRCULAR     0.375            0          0          0          1                    
+Conduit_4        CIRCULAR     0.45             0          0          0          1                    
 
 [REPORT]
 ;;Reporting Options
@@ -86,7 +83,7 @@ LINKS ALL
 [TAGS]
 
 [MAP]
-DIMENSIONS 0.000 0.000 359603.589 6188028.033
+DIMENSIONS 0.000 0.000 359603.589 6188030.502
 Units      None
 
 [COORDINATES]
@@ -96,8 +93,7 @@ Inlet_1          305698.510         6188004.630
 Inlet_2          305703.390         6187999.000       
 Inlet_3          305713.180         6188002.020       
 Inlet_4          305727.240         6188004.610       
-Outlet_1         305736.680         6188026.650       
-Outfall_1        305738.668         6188029.002       
+Outfall_1        305736.680         6188026.650       
 
 [VERTICES]
 ;;Link           X-Coord            Y-Coord           
