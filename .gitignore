@@ -1,1 +1,5 @@
 *.sww
+
+__pycache__
+
+.vscode

@@ -40,7 +40,7 @@ def calculate_Q(head1D, depth2D, bed2D, length_weir, area_manhole, cw=0.67, co=0
         #print(head1D,depth2D, bed2D)
         #print(head1D-depth2D-bed2D)
         
-        # Otherwise if h1d >= (depth2D + bed2D) use orifice equation (Equation (11)) surcharge
+        # Otherwise if head1D >= (depth2D + bed2D) use orifice equation (Equation (11)) surcharge
         Q = np.where(head1D>depth2D+bed2D+eps,  -co*area_manhole*np.sqrt(2*g*(head1D-depth2D-bed2D)), Q)
         #print(Q)
 
