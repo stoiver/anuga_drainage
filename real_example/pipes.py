@@ -180,7 +180,7 @@ times =[]
 
 Q_in_old = np.zeros_like(anuga_elevs)
 #time_average = 10 # sec
-
+domain.output_frequency = 100
 for t in domain.evolve(yieldstep=dt, finaltime=ft):
     #print('\n')
     if domain.yieldstep_counter%domain.output_frequency == 0:
