@@ -4,11 +4,13 @@ from hymo import SWMMInpFile
 from anuga import Inlet_operator,Region
 import numpy as np
 
-# Would a class be better here?
-
-
-
 def n_sided_inlet(n_sides, area, inlet_coordinate, rotation):
+    # Computes the vertex coordinates and side length of a regular polygon with:
+    # Number of sides = n_sides
+    # Area = area
+    if n_sides < 3:
+        raise RuntimeError('A polygon should have at least 3 sides')
+
     one_segment = math.pi * 2 / n_sides
     side_length = math.sqrt(4.0*area*math.tan(math.pi/n_sides)/n_sides)
     
@@ -25,24 +27,21 @@ def n_sided_inlet(n_sides, area, inlet_coordinate, rotation):
     return vertex, side_length
 
 def initialize_inlets(domain, sim, inp, n_sides = 6, manhole_areas = [1], Q_in_0 = [1], rotation = 0):
-# def initialize_inlets(domain, sim, inp, n_sides, manhole_areas, Q_in_0, rotation):
-
     if n_sides < 3:
         raise RuntimeError('A polygon should have at least 3 sides')
 
     if not(isinstance(manhole_areas, int) or isinstance(manhole_areas,float) or isinstance(manhole_areas,list) or isinstance(manhole_areas,np.ndarray)):
-
-#    if not(type(manhole_areas) == int or type(manhole_areas) == float or type(manhole_areas) == list or type(manhole_areas) == np.ndarray):
         raise RuntimeError('Invalid ')
+
     inlet_operators = dict()
     elevation_list  = []
     circumferences  = []
     polygons        = []
-    in_nodes = [node for node in Nodes(sim) if node.is_junction()]
+    in_nodes        = [node for node in Nodes(sim) if node.is_junction()]
+
     for inlet_idx, node in enumerate(in_nodes):
 
         if isinstance(manhole_areas,list) or isinstance(manhole_areas,np.ndarray):
-#        if type(manhole_areas) == list or type(manhole_areas) == np.ndarray:
             inlet_area = manhole_areas[inlet_idx] 
 
         inlet_coordinates = [inp.coordinates.loc[node.nodeid].X_Coord, inp.coordinates.loc[node.nodeid].Y_Coord]
