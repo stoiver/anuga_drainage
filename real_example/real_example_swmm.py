@@ -23,11 +23,16 @@ dt           = 1.0     # yield step
 ft           = 100 # final timestep
 input_rate   = 0.102
 
+
+from pyswmm import SystemStats
+
+
 output_frequency = 1
 do_print         = True
 do_data_save     = False
 
 basename = 'model/terrain'
+inp_name = 'real_example.inp'
 outname  = 'real_example_swmm'
 meshname = 'model/terrain.tsh'
 
@@ -85,14 +90,13 @@ domain.set_boundary({'inflow': Br, 'bottom': Br, 'outflow': Bd, 'top': Br})
 input1_anuga_region   = Region(domain, radius=1.0, center=(305694.91,6188013.94))
 input1_anuga_inlet_op = Inlet_operator(domain, input1_anuga_region, Q=input_rate) 
 
-sim = Simulation('real_example.inp')
-inp = SWMMInpFile('real_example.inp')
+sim = Simulation(inp_name)
+inp = SWMMInpFile(inp_name)
 
 link_volume_0 = 0
 for link in Links(sim):
     link_volume_0 += link.volume
 
-old_inlet_vol = [node.volume for node in Nodes(sim) if node.is_junction()]
 node_ids      = [node.nodeid for node in Nodes(sim)]
 in_node_ids   = [node.nodeid for node in Nodes(sim) if node.is_junction()]
 n_in_nodes    = len(in_node_ids)
@@ -106,7 +110,6 @@ inlet_operators,inlet_elevation,_,_ = initialize_inlets(domain,sim,inp,n_sides,i
 inlet_weir_length = 2*np.sqrt(np.pi*inlet_area)
 
 
-node_volume    = sum(old_inlet_vol)
 Q_in_old       = np.zeros_like(inlet_elevation)
 outfall_vol    = 0
 
@@ -120,13 +123,19 @@ if do_data_save:
     cumulative_inlet_flooding = np.array(n_in_nodes*[0.0])
     cumulative_inlet_flow     = np.array(n_in_nodes*[0.0])
 
+system_routing = SystemStats(sim)
+
 
 wall_clock_start = time.perf_counter()
 sim.start()
+old_inlet_vol = [- node.statistics['lateral_infow_vol'] + node.statistics['flooding_volume'] for node in Nodes(sim) if node.is_junction()]
+node_volume    = sum(old_inlet_vol)
+
 for t in domain.evolve(yieldstep=dt, finaltime=ft):
     anuga_depths = np.array([inlet_operators[in_id].inlet.get_average_depth() for in_id in in_node_ids])
 
     if domain.yieldstep_counter%output_frequency == 0 and do_print:
+        print(f'External flow: {system_routing.routing_stats["external_inflow"]}')
         print('t = ',t)
 
     # Reset link volume at every iteration and sum volumes
@@ -139,8 +148,8 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
 
     inlet_head_swmm   = np.array([node.head for node in Nodes(sim) if node.is_junction()])
 
-    Q_in = calculate_Q(inlet_head_swmm, anuga_depths, inlet_elevation, inlet_weir_length, inlet_area) # inputs between manual and auto checked to be the same 20/09
-    Q_in = ((time_average - dt)*Q_in_old + dt*Q_in)/time_average
+    Q_in     = calculate_Q(inlet_head_swmm, anuga_depths, inlet_elevation, inlet_weir_length, inlet_area) # inputs between manual and auto checked to be the same 20/09
+    Q_in     = ((time_average - dt)*Q_in_old + dt*Q_in)/time_average
     Q_in_old = Q_in.copy()
 
     if do_data_save:
@@ -161,8 +170,8 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     # inlet_flow = [-node.lateral_inflow + node.flooding ofr node in Nodes(sim) if node.is_junction()]
     
     ### Compute inlet flow using volumes
-    inlet_vol = [- node.statistics['lateral_infow_vol'] + node.statistics['flooding_volume'] for node in Nodes(sim) if node.is_junction()]
-    inlet_flow = [(new_vol - old_vol)/dt for new_vol,old_vol in zip(inlet_vol,old_inlet_vol)]
+    inlet_vol     = [- node.statistics['lateral_infow_vol'] + node.statistics['flooding_volume'] for node in Nodes(sim) if node.is_junction()]
+    inlet_flow    = [(new_vol - old_vol)/dt for new_vol,old_vol in zip(inlet_vol,old_inlet_vol)]
     old_inlet_vol = inlet_vol
 
     # Compute statistics and append data

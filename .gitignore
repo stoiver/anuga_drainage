@@ -1,2 +1,4 @@
 *.sww
 *.pyc
+*.out
+*.rpt
