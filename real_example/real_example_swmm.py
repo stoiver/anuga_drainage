@@ -88,6 +88,7 @@ input1_anuga_inlet_op = Inlet_operator(domain, input1_anuga_region, Q=input_rate
 sim = Simulation('real_example.inp')
 inp = SWMMInpFile('real_example.inp')
 
+
 link_volume_0 = 0
 for link in Links(sim):
     link_volume_0 += link.volume
@@ -123,6 +124,11 @@ if do_data_save:
 
 wall_clock_start = time.perf_counter()
 sim.start()
+
+print('')
+print('')
+print('Start ANUGA evolve')
+
 for t in domain.evolve(yieldstep=dt, finaltime=ft):
     anuga_depths = np.array([inlet_operators[in_id].inlet.get_average_depth() for in_id in in_node_ids])
 
