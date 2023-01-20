@@ -3,13 +3,13 @@
 #------------------------------------------------------------------------------
 print (' ABOUT to Start Simulation:- Importing Modules')
 
-import anuga, anuga.parallel, numpy, time, os, glob
+import anuga, numpy, time, os, glob
 from anuga.operators.rate_operators import Polygonal_rate_operator
-from anuga import file_function, Polygon_function, read_polygon, create_mesh_from_regions, Domain, Inlet_operator
+from anuga import file_function, Polygon_function, read_polygon, create_domain_from_regions, Domain, Inlet_operator
 import anuga.utilities.spatialInputUtil as su
 
 from anuga import distribute, myid, numprocs, finalize, barrier
-from anuga.parallel.parallel_operator_factory import Inlet_operator, Boyd_box_operator, Boyd_pipe_operator
+from anuga import Inlet_operator, Boyd_box_operator, Boyd_pipe_operator
 from anuga import Rate_operator
 from anuga import Region
 
@@ -21,30 +21,26 @@ import math
 #------------------------------------------------------------------------------
 
 basename = 'model/terrain'
-outname = 'no_pipes'
+outname = 'real_example_no_pipes'
 meshname = 'model/terrain.tsh'
 
 #------------------------------------------------------------------------------
-# CREATING MESH
+# CREATING COMPUTATIONAL DOMAIN
 #------------------------------------------------------------------------------
 CatchmentDictionary = {'model/kerb/kerb1.csv':0.01, 'model/kerb/kerb2.csv':0.01}
     
 bounding_polygon = anuga.read_polygon('model/domain.csv')
 interior_regions = anuga.read_polygon_dir(CatchmentDictionary, 'model/kerb')
 
-create_mesh_from_regions(bounding_polygon,
+domain = create_domain_from_regions(bounding_polygon,
     boundary_tags={'south': [0], 'east': [1], 'north': [2], 'west': [3]},
     maximum_triangle_area=0.1,
     interior_regions=interior_regions,
-    filename=meshname,
+    mesh_filename=meshname,
     use_cache=False,
-    verbose=True)
+    verbose=False)
 
-#------------------------------------------------------------------------------
-# SETUP COMPUTATIONAL DOMAIN
-#------------------------------------------------------------------------------
-
-domain = anuga.Domain(meshname, use_cache=False, verbose=True)
+domain = anuga.Domain(meshname, use_cache=False, verbose=False)
 domain.set_minimum_storable_height(0.015)
 domain.set_name(outname) 
 
@@ -59,7 +55,7 @@ domain.set_quantity('friction', 0.03)
 # Set a Initial Water Level over the Domain
 domain.set_quantity('stage', 0)
 
-domain.set_quantity('elevation', filename=basename+'.csv', use_cache=False, verbose=True, alpha=0.99)
+domain.set_quantity('elevation', filename=basename+'.csv', alpha=0.99)
 
 #------------------------------------------------------------------------------
 # SETUP BOUNDARY CONDITIONS
@@ -70,7 +66,7 @@ print ('Available boundary tags', domain.get_boundary_tags())
 Br = anuga.Reflective_boundary(domain)  
 Bd = anuga.Dirichlet_boundary([0,0,0])
 
-domain.set_boundary({'interior': Br, 'exterior': Bd, 'west': Bd, 'south': Bd, 'north': Bd, 'east': Bd})
+domain.set_boundary({'exterior': Bd, 'west': Bd, 'south': Bd, 'north': Bd, 'east': Bd})
  
 # ------------------------------------------------------------------------------
 # Setup inject water

@@ -3,13 +3,13 @@
 #------------------------------------------------------------------------------
 print (' ABOUT to Start Simulation:- Importing Modules')
 
-import anuga, anuga.parallel, numpy, time, os, glob
+import anuga, numpy, time, os, glob
 from anuga.operators.rate_operators import Polygonal_rate_operator
-from anuga import file_function, Polygon_function, read_polygon, create_mesh_from_regions, Domain, Inlet_operator
+from anuga import file_function, Polygon_function, read_polygon, create_domain_from_regions, Domain, Inlet_operator
 import anuga.utilities.spatialInputUtil as su
 
 from anuga import distribute, myid, numprocs, finalize, barrier
-from anuga.parallel.parallel_operator_factory import Inlet_operator, Boyd_box_operator, Boyd_pipe_operator
+from anuga import Inlet_operator, Boyd_box_operator, Boyd_pipe_operator
 from anuga import Rate_operator
 from anuga import Region
 
@@ -21,7 +21,7 @@ import math
 #------------------------------------------------------------------------------
 
 basename = 'model/terrain'
-outname = 'pipes'
+outname = 'real_example_pipes'
 meshname = 'model/terrain.tsh'
 
 #------------------------------------------------------------------------------
@@ -46,22 +46,22 @@ for i, v in enumerate(b_polygon):
     plt.annotate(str(v), xy=v, xytext=(-7,7), textcoords='offset points')
 plt.pause(0.01)
 
+#------------------------------------------------------------------------------
+# SETUP COMPUTATIONAL DOMAIN
+#------------------------------------------------------------------------------
 
-create_mesh_from_regions(bounding_polygon,
+domain = create_domain_from_regions(bounding_polygon,
     boundary_tags={'inflow': [12], 'bottom': [0,1,2,3,4,5], 'top': [7,8,9,10,11], 'outflow': [6]},
     #boundary_tags=None,
     maximum_triangle_area=0.1,
     breaklines=riverWalls.values(),
     interior_regions=interior_regions,
-    filename=meshname,
+    mesh_filename=meshname,
     use_cache=False,
-    verbose=True)
+    verbose=False)
 
-#------------------------------------------------------------------------------
-# SETUP COMPUTATIONAL DOMAIN
-#------------------------------------------------------------------------------
 
-domain = anuga.Domain(meshname, use_cache=False, verbose=True)
+
 domain.set_minimum_storable_height(0.0)
 domain.riverwallData.create_riverwalls(riverWalls) 
 domain.set_name(outname) 
@@ -77,7 +77,7 @@ domain.set_quantity('friction', 0.025)
 # Set a Initial Water Level over the Domain
 domain.set_quantity('stage', 0)
 
-domain.set_quantity('elevation', filename=basename+'.csv', use_cache=False, verbose=True, alpha=0.99)
+domain.set_quantity('elevation', filename=basename+'.csv', alpha=0.99)
 
 #------------------------------------------------------------------------------
 # SETUP BOUNDARY CONDITIONS
@@ -231,7 +231,7 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
  
     # Simulate sewer with flow input
     superlink.step(Q_in=Q_in, dt=dt)
-    superlink.reposition_junctions()
+    #superlink.reposition_junctions()
 
     # Add/remove flows from surface domain
     inlet1_anuga_inlet_op.set_Q(-Q_in[0])
