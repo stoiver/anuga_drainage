@@ -40,7 +40,6 @@ domain = create_domain_from_regions(bounding_polygon,
     use_cache=False,
     verbose=False)
 
-domain = anuga.Domain(meshname, use_cache=False, verbose=False)
 domain.set_minimum_storable_height(0.015)
 domain.set_name(outname) 
 

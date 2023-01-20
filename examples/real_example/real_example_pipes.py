@@ -63,7 +63,7 @@ domain = create_domain_from_regions(bounding_polygon,
 
 
 domain.set_minimum_storable_height(0.0)
-domain.riverwallData.create_riverwalls(riverWalls) 
+domain.riverwallData.create_riverwalls(riverWalls, verbose=False) 
 domain.set_name(outname) 
 
 print (domain.statistics())
