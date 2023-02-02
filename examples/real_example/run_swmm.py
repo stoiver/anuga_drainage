@@ -14,8 +14,8 @@ from pyswmm import Simulation, Nodes, Links
 import matplotlib.pyplot as plt
 
 import time
-from coupling_functions.inlet_initialization import initialize_inlets
-from coupling_functions.coupling import calculate_Q
+from anuga_drainage.inlet_initialization import initialize_inlets
+from anuga_drainage.coupling import calculate_Q
 
 time_average = 10 # sec
 dt           = 1.0     # yield step
