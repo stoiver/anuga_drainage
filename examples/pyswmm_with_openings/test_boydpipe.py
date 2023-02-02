@@ -15,11 +15,12 @@ to SWMM and flowing back to ANUGA.
 from anuga import Dirichlet_boundary
 from anuga import Domain
 from anuga import Reflective_boundary
-from anuga.operators.rate_operators import Rate_operator
+from anuga import Rate_operator
 from anuga import Region
-from anuga import rectangular_cross
+from anuga import rectangular_cross_domain
+from anuga import Inlet_operator, Boyd_box_operator, Boyd_pipe_operator
+
 import numpy as num
-from anuga.parallel.parallel_operator_factory import Inlet_operator, Boyd_box_operator, Boyd_pipe_operator
 
 # ------------------------------------------------------------------------------
 # Setup computational domain
@@ -29,9 +30,8 @@ length = 15.
 width = 4.
 dx = dy = 0.25  # .1           # Resolution: Length of subdivisions on both axes
 
-points, vertices, boundary = rectangular_cross(int(length / dx), int(width / dy),
+domain = rectangular_cross_domain(int(length / dx), int(width / dy),
                                                len1=length, len2=width)
-domain = Domain(points, vertices, boundary)
 domain.set_name('boyd')  # Output name based on script name. You can add timestamp=True
 print(domain.statistics())
 
@@ -148,8 +148,8 @@ Boyd_pipe_operator(domain,
                     #end_point1=[12.0, 2.0],
                     #exchange_line0=[[9.0, 1.75],[9.0, 3.25]],
                     #exchange_line1=[[13.0, 1.75],[13.0, 3.25]],
-                    losses=1.5,
                     end_points=[end_point0, end_point1],
+                    losses=1.5,
                     diameter=1.0,
                     apron=0.5,
                     use_momentum_jet=True, 

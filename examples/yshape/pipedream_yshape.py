@@ -146,7 +146,7 @@ for t in domain.evolve(yieldstep=dt, finaltime=100.0):
 
     # Simulate sewer with flow input
     superlink.step(Q_in=Q_in, dt=dt)
-    superlink.reposition_junctions()
+    #superlink.reposition_junctions()
 
     # Add/remove flows from surface domain
     inlet1_anuga_inlet_op.set_Q(-Q_in[0])
