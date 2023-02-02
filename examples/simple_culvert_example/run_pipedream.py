@@ -10,7 +10,7 @@ print('FILENAMES, MODEL DOMAIN and VARIABLES')
 #------------------------------------------------------------------------------
 
 basename = 'simple_culvert'
-outname =  'anuga_pipedream_simple_culvert'
+outname =  'domain_pipedream'
 
 
 rf = 20  # refinement factor for domain, if too coarse the inlets will overlap the wall

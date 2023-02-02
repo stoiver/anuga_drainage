@@ -12,7 +12,7 @@ import numpy as np
 #------------------------------------------------------------------------------
 
 basename = 'simple_culvert'
-outname =  'anuga_boyd_simple_culvert'
+outname =  'domain_boyd'
 
 rf = 20  # refinement factor for domain, if too coarse the inlets will overlap the wall
 

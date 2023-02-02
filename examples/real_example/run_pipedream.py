@@ -4,7 +4,7 @@
 print (' ABOUT to Start Simulation:- Importing Modules')
 
 import anuga, numpy, time, os, glob
-from anuga.operators.rate_operators import Polygonal_rate_operator
+from anuga import Rate_operator
 from anuga import file_function, Polygon_function, read_polygon, create_domain_from_regions, Domain, Inlet_operator
 import anuga.utilities.spatialInputUtil as su
 
@@ -206,6 +206,8 @@ for t in domain.evolve(yieldstep=dt, finaltime=ft):
     C_w = 0.67
     L_w = 0.25**2 * np.pi
 
+    # FIXME SR: Convert this over to the calculate_Q procedure
+    # from anuga_drainage
     Q_in = np.where(superlink.H_j <= anuga_elevs,
                     C_w * L_w * np.sqrt(anuga_depths) * anuga_depths,
                     C_w * L_w * np.sqrt(superlink.H_j - anuga_elevs)
