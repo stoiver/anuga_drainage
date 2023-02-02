@@ -17,7 +17,7 @@ from anuga import Rate_operator
 #------------------------------------------------------------------------------
 
 basename = 'terrain'
-outname = 'anuga_boyd_culvert'
+outname = 'domain_boyd_culvert'
 meshname = 'terrain.msh'
 
 dt = 1.0

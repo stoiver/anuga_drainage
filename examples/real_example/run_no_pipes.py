@@ -21,7 +21,7 @@ import math
 #------------------------------------------------------------------------------
 
 basename = 'model/terrain'
-outname = 'real_example_no_pipes'
+outname = 'domain_no_pipes'
 meshname = 'model/terrain.tsh'
 
 #------------------------------------------------------------------------------

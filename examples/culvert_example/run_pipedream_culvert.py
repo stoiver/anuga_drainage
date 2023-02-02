@@ -16,7 +16,7 @@ import numpy as np
 #------------------------------------------------------------------------------
 
 basename = 'terrain'
-outname =  'anuga_pipedream_culvert'
+outname =  'domain_pipedream_culvert'
 meshname = 'terrain.msh'
 
 dt = 0.1      # yield step
@@ -57,7 +57,7 @@ print (domain.statistics())
 #------------------------------------------------------------------------------
 
 domain.set_quantity('friction', 0.035)
-domain.set_quantity('elevation', filename=basename+'.csv', use_cache=True, verbose=True, alpha=0.1)
+domain.set_quantity('elevation', filename=basename+'.csv', use_cache=True, verbose=verbose, alpha=0.1)
 
 #------------------------------------------------------------------------------
 # SETUP BOUNDARY CONDITIONS
@@ -245,7 +245,7 @@ for t in domain.evolve(yieldstep=dt, outputstep=out_dt, finaltime=ft):
 
     # Simulate sewer with flow input
     superlink.step(Q_in=Q_in, dt=dt)
-    superlink.reposition_junctions()
+    #superlink.reposition_junctions()
 
     # Add/remove flows from surface domain
     inlet1_anuga_inlet_op.set_Q(-Q_in[0])

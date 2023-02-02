@@ -32,7 +32,7 @@ do_data_save     = False
 
 basename = 'model/terrain'
 inp_name = 'real_example.inp'
-outname  = 'real_example_swmm'
+outname  = 'domain_swmm'
 meshname = 'model/terrain.tsh'
 
 #------------------------------------------------------------------------------
