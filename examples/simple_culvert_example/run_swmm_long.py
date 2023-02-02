@@ -15,6 +15,7 @@ print('ABOUT to Start Simulation: IMPORT NECESSARY MODULES')
 
 import anuga
 import numpy as np
+from anuga_drainage import calculate_Q
 
 #------------------------------------------------------------------------------
 print('SETUP FILENAMES, MODEL DOMAIN and VARIABLES')
@@ -132,7 +133,7 @@ from pyswmm import Simulation, Nodes, Links
 import matplotlib.pyplot as plt
 import pandas as pd
 
-sim = Simulation('./swmm_input_long_culvert.inp')
+sim = Simulation('./swmm_input_long.inp')
 sim.start()
 
 swmm_inlet = Nodes(sim)['Inlet']
@@ -159,8 +160,6 @@ time_series = []
 anuga_ws = []
 Q_ins = []
 
-
-from coupling import calculate_Q
 
 #---------------------------------------------------------------------------
 print('Average Q calculation')

@@ -4,6 +4,7 @@ print('IMPORT NECESSARY MODULES')
 
 import anuga
 import numpy as np
+from anuga_drainage import calculate_Q
 
 #------------------------------------------------------------------------------
 print('FILENAMES, MODEL DOMAIN and VARIABLES')
@@ -154,8 +155,6 @@ time_series = []
 anuga_ws = []
 Q_ins = []
 
-
-from coupling import calculate_Q
 
 #---------------------------------------------------------------------------
 print('Set time averaging of Q')

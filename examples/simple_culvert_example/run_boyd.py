@@ -108,7 +108,7 @@ culvert = anuga.Boyd_box_operator(domain,
     use_momentum_jet=False,
     use_velocity_head=False,
     manning=0.013,
-    logging=True,
+    logging=False,
     label='boyd_box', 
     verbose=False)
     
