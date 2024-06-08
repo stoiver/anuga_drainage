@@ -101,9 +101,9 @@ outlet_anuga_region = Region(domain, radius=1.0, center=(17., 3.))
 
 input1_anuga_region = Region(domain, radius=1.0, center=(2., 1.))
 
-inlet1_anuga_inlet_op = Inlet_operator(domain, inlet1_anuga_region, Q=0.0, zero_velocity=True)
-inlet2_anuga_inlet_op = Inlet_operator(domain, inlet2_anuga_region, Q=0.0, zero_velocity=True)
-outlet_anuga_inlet_op = Inlet_operator(domain, outlet_anuga_region, Q=0.0, zero_velocity=False)
+inlet1_anuga_inlet_op = Inlet_operator(domain, inlet1_anuga_region, Q=0.0)
+inlet2_anuga_inlet_op = Inlet_operator(domain, inlet2_anuga_region, Q=0.0)
+outlet_anuga_inlet_op = Inlet_operator(domain, outlet_anuga_region, Q=0.0)
 
 input1_anuga_inlet_op = Inlet_operator(domain, input1_anuga_region, Q=1) #only inlet1 has water inflow.
 
