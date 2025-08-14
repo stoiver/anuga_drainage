@@ -16,9 +16,9 @@ outname =  'domain_boyd'
 
 rf = 20  # refinement factor for domain, if too coarse the inlets will overlap the wall
 
-dt = 0.01     # yield step
-out_dt = 2.0 # output step
-ft = 400     # final timestep
+dt = 20.0     # yield step
+out_dt = dt   # output step
+ft = 400      # final timestep
 
 verbose = False
 
@@ -76,9 +76,11 @@ domain.set_boundary({'left': Bd, 'bottom': Br, 'top': Br, 'right': Br})
 
 print('Setup anuga inflow inlet')
 
-input_Q = 1.0
-line=[[59.0, 5.0],[59.0, 15.0]]
-anuga.Inlet_operator(domain, line, input_Q)
+input_Q = 10.0
+line=[[59.0, 7.0],[59.0, 13.0]]
+polygon = [[59.0, 7.0],[59.0, 13.0], [50.0, 13.0], [50.0, 7.0]]
+inlet_region = anuga.Region(domain, polygon= polygon)
+anuga.Inlet_operator(domain, inlet_region, input_Q)
 
 #------------------------------------------------------------------------------
 # BOYD PIPE CULVERT
@@ -87,32 +89,48 @@ anuga.Inlet_operator(domain, line, input_Q)
 print('Setup boyd culvert')
 
 losses = {'inlet':0.0, 'outlet':0.0, 'bend':0.0, 'grate':0.0, 'pier': 0.0, 'other': 0.0}
-ep0 = np.array([21, 10.0]) 
-ep1 = np.array([9,  10.0])
+ep0 = np.array([21, 10.0]) # upstream
+ep1 = np.array([9,  10.0]) # downstream
+
+
+el0 = [ [21.0, 5.5], [21.0, 14.5]]
+el1 = [ [9.0, 5.5], [9.0, 14.5]]
+
+eq0 = [23.0,10.0]
+eq1 = [7.0, 10.0]
 
 ep0_tid = domain.get_triangle_containing_point(ep0)
 ep1_tid = domain.get_triangle_containing_point(ep1)
 
+eq0_tid = domain.get_triangle_containing_point(eq0)
+eq1_tid = domain.get_triangle_containing_point(eq1)
+
 stage_c = domain.get_quantity('stage').centroid_values
 elev_c  = domain.get_quantity('elevation').centroid_values
+xmom_c  = domain.get_quantity('xmomentum').centroid_values
 
     
 invert_elevations=[0.07, 0.03]  
 
 culvert = anuga.Boyd_box_operator(domain,
     losses=losses,
-    width=8.0,
+    width=10.0,
     height=1.0,
-    end_points=[ep0, ep1],
+    #end_points=[ep0, ep1],
+    exchange_lines=[el0,el1],
+    enquiry_points=[eq0,eq1],
     invert_elevations=invert_elevations,
-    use_momentum_jet=False,
-    use_velocity_head=False,
-    manning=0.013,
+    use_momentum_jet=True,
+    use_velocity_head=True,
+    manning=0.01,
     logging=False,
     label='boyd_box', 
     verbose=False)
     
+print(culvert.statistics())
     
+accumulated_flow = culvert.accumulated_flow
+
 #------------------------------------------------------------------------------
 # EVOLVE SYSTEM THROUGH TIME
 #------------------------------------------------------------------------------
@@ -125,9 +143,10 @@ for t in domain.evolve(yieldstep=dt, outputstep=out_dt, finaltime=ft):
     if domain.yieldstep_counter%domain.output_frequency == 0:
         domain.print_timestepping_statistics()
 
-    anuga_stages = np.array([stage_c[ep0_tid], stage_c[ep1_tid]])                 
-    anuga_depths = np.array([stage_c[ep0_tid]-elev_c[ep0_tid], stage_c[ep1_tid]-elev_c[ep1_tid]])    
-    anuga_beds   = np.array([elev_c[ep0_tid], elev_c[ep1_tid]]) 
+    anuga_stages = np.array([stage_c[eq1_tid], stage_c[eq0_tid]])                 
+    anuga_depths = np.array([stage_c[eq1_tid]-elev_c[eq1_tid], stage_c[eq0_tid]-elev_c[eq0_tid]])    
+    anuga_beds   = np.array([elev_c[eq1_tid], elev_c[eq0_tid]]) 
+    anuga_xmom   = np.array([xmom_c[eq1_tid], xmom_c[eq0_tid]]) 
 
     sewer_volume = 0.0
 
@@ -137,14 +156,26 @@ for t in domain.evolve(yieldstep=dt, outputstep=out_dt, finaltime=ft):
     total_volume_real = domain.get_water_volume() + sewer_volume
     loss = total_volume_real - total_volume_correct
 
+    old_accumulated_flow = accumulated_flow
+    accumulated_flow = culvert.accumulated_flow
+
+    yield_step_flow = (accumulated_flow - old_accumulated_flow)/dt
+
     if domain.yieldstep_counter%domain.output_frequency == 0:
-        print('    Loss         ', loss)
-        print('    TV correct   ', total_volume_correct)
-        print('    domain volume', domain.get_water_volume())
-        print('    sewer_volume ', sewer_volume)
-        print('    anuga_beds   ', anuga_beds)
-        print('    anuga_depths ', anuga_depths)
-        print('    anuga_stages ', anuga_stages)
+        print('    Loss (m^3)            ', loss)
+        print('    TV correct (m^3)      ', total_volume_correct)
+        print('    domain volume (m^3)   ', domain.get_water_volume())
+        print('    sewer_volume (m^3)    ', sewer_volume)
+        print('    anuga_beds (m)        ', anuga_beds)
+        print('    anuga_stages (m)      ', anuga_stages)
+        print('    anuga_depths (m)      ', anuga_depths)
+        print('    anuga_xmom (m^2/s)    ', anuga_xmom) 
+        print('    culvert vel (m/s)     ', culvert.velocity)
+        print('    culvert depth (m)     ', culvert.outlet_depth)
+        print('    acc flow rate (m^3/s) ', yield_step_flow)
+
+        #print('time,ins inst Q,aver Q,vel,driving E,delta_total_E')
+        
  
 
 print ('Finished')
