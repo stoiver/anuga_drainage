@@ -32,21 +32,15 @@ dependencies = [
 [project.optional-dependencies]
 # SWMM backend (standard PyPI release).
 swmm = ["pyswmm>=2.1"]
-# pipedream backend. The PyPI release (0.2.2) uses np.bool8, removed in numpy
-# 2.x, so it must come from git master until a fixed release ships
-# (see mdbartos/pipedream#73).
-#
-# pandas<3 is required alongside it: pipedream's compute_storage_areas/volumes
-# call numba kernels with an eager, writable-only signature (boolean[:]), but
-# feed them `(_storage_type.str.lower()=='functional').values`. pandas 3.0
-# enables Copy-on-Write by default, which makes that `.values` read-only, so
-# numba rejects it ("No matching definition ... readonly array(bool)") and
-# SuperLink(...) construction crashes. pandas<3 keeps `.values` writable.
-# Remove this pin once pipedream is patched upstream (mdbartos/pipedream#74)
-# and the fixed version is pinned above.
+# pipedream backend, from the anuga-community fork's `anuga` branch. That is
+# upstream master plus two fixes upstream has not merged (it has had no commit
+# since 2024): np.bool8 -> np.bool_ for numpy 2.x (mdbartos/pipedream#73) and
+# writable storage-type masks for pandas 3's Copy-on-Write
+# (mdbartos/pipedream#74). Neither the PyPI release (0.2.2) nor upstream
+# master works with a current numpy/pandas. Switch back to upstream once both
+# are merged and released.
 pipedream = [
-    "pipedream-solver @ git+https://github.com/mdbartos/pipedream.git",
-    "pandas<3",
+    "pipedream-solver @ git+https://github.com/anuga-community/pipedream.git@anuga",
 ]
 test = ["pytest"]
 # Hydrograph viewer GUI (Tkinter is stdlib; numpy/pandas are core deps).
