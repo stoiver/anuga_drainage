@@ -29,10 +29,11 @@ pip install -e .[swmm]        # + SWMM backend (standard pyswmm release)
 pip install -e .[pipedream]   # + pipedream backend (from git; see note below)
 ```
 
-> The PyPI release of `pipedream-solver` (0.2.2) uses `np.bool8`, removed in
-> numpy 2.x, so the `[pipedream]` extra installs it from git master. See
-> [`CLAUDE.md`](CLAUDE.md) for this and other environment constraints (notably
-> that stock pyswmm 2.1 couples in whole-second steps).
+> The `[pipedream]` extra installs pipedream from the
+> [anuga-community fork](https://github.com/anuga-community/pipedream)'s
+> `anuga` branch: upstream master plus the numpy 2 and pandas 3 fixes upstream
+> has not merged. See [`CLAUDE.md`](CLAUDE.md) for this and other environment
+> constraints (notably that stock pyswmm 2.1 couples in whole-second steps).
 
 ## Running an example
 

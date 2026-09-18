@@ -10,9 +10,9 @@
 #     maintainer's dev box instead runs ANUGA built from source (3.3.6.dev) on
 #     Python 3.14 — see CLAUDE.md.
 #   * The 1D backends and this package come via pip from the project's extras
-#     (see pyproject.toml). pipedream-solver is pulled from git master because
-#     its PyPI release (0.2.2) uses np.bool8, removed in numpy 2.x
-#     (mdbartos/pipedream#73).
+#     (see pyproject.toml). pipedream-solver comes from the anuga-community
+#     fork's `anuga` branch, which carries the numpy 2 and pandas 3 fixes
+#     upstream has not merged (mdbartos/pipedream#73, #74).
 #   * Run `conda env create` from the repository root so the editable install
 #     (`-e .`) picks up this package.
 name: anuga_drainage
@@ -21,12 +21,7 @@ channels:
 dependencies:
   - python=3.12
   - anuga=3.3.7
-  # pandas<3: pipedream crashes under pandas 3.0's Copy-on-Write (its numba
-  # storage kernels reject the now read-only `.values` bool mask). Pinned at the
-  # conda level so the solver resolves pandas 2.x up front, rather than conda
-  # pulling pandas 3 and pip having to downgrade it (matches the `pandas<3` pin
-  # in pyproject.toml's pipedream extra). See CLAUDE.md.
-  - pandas<3
+  - pandas
   - matplotlib
   - pip
   - pip:

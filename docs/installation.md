@@ -6,7 +6,7 @@ environment — ANUGA is not installed by this package. On top of that:
 ```bash
 pip install -e .            # the anuga_drainage package (needs numpy, pandas)
 pip install pyswmm          # SWMM backend (standard PyPI release, >= 2.1)
-pip install "pipedream-solver @ git+https://github.com/mdbartos/pipedream.git"
+pip install "pipedream-solver @ git+https://github.com/anuga-community/pipedream.git@anuga"
 ```
 
 The package itself only depends on `numpy` and `pandas`; the two 1D backends are
@@ -14,18 +14,20 @@ optional extras, installed only for the backend(s) you use:
 
 ```bash
 pip install -e .[swmm]            # pyswmm
-pip install -e .[pipedream]       # pipedream (from git, see below)
+pip install -e .[pipedream]       # pipedream (from the community fork, see below)
 pip install -e .[test]            # pytest
 ```
 
 ## Backend notes
 
-```{admonition} pipedream must come from git, not PyPI
+```{admonition} pipedream comes from the anuga-community fork, not PyPI
 :class: warning
-The released `pipedream-solver` (0.2.2) uses `np.bool8`, removed in numpy 2.x
-(which a current ANUGA requires), so it crashes on `SuperLink(...)`
-construction. Git master replaced those with `np.bool_`. Install it from git as
-shown above.
+Neither the released `pipedream-solver` (0.2.2) nor upstream master works with
+a current numpy/pandas: 0.2.2 uses `np.bool8`, removed in numpy 2.x, and
+master's `SuperLink(...)` construction crashes under pandas 3. The
+[anuga-community fork](https://github.com/anuga-community/pipedream)'s `anuga`
+branch is upstream master plus both fixes (they are also open upstream as
+mdbartos/pipedream#73 and #74). The `[pipedream]` extra installs it.
 ```
 
 ### SWMM / pyswmm 2.1 stepping constraints
