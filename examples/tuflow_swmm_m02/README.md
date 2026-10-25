@@ -49,6 +49,45 @@ These have to be resolved or quantified before the comparison is meaningful:
   flow-routing continuity error at these flows; see the comment in
   `tuflow_inputs.py`.
 
-There are no TUFLOW reference results yet. The tutorial zip ships a Windows
-TUFLOW executable that runs this model licence-free (`Tutorial Model == ON`),
-so they have to be produced on Windows.
+## TUFLOW reference run (Linux, under Wine)
+
+The tutorial zip ships the Windows TUFLOW 2026.0.0 build, which runs this model
+licence-free (`Tutorial Model == ON`). On Linux it runs under Wine:
+
+```bash
+python fetch_data.py --exe      # also extracts the TUFLOW build to tuflow_data/exe/
+./run_tuflow.sh                 # CPU, ~3 min; results in tuflow_data/TUFLOW/results/
+```
+
+This needs one-off setup in the Wine prefix: Microsoft's VC++ 2015–2022 x64
+redistributable (`wine vc_redist.x64.exe /install /quiet /norestart`). The HPC
+solver uses `VCOMP140.DLL`, and Wine's builtin version ignores the requested
+OpenMP thread count. The other Wine workarounds are built into
+`run_tuflow.sh` and commented there. CUDA doesn't reach Wine (no `nvcuda.dll`
+in mainline Wine), so the run uses `Hardware == CPU`. Tested on Wine 10.0,
+Ubuntu 26.04: a cumulative mass error of 0.05 %.
+
+TUFLOW writes `results/TS02_5m_001_CPU_swmm.{rpt,out,inp}`: the SWMM side,
+which includes the culverts. Its merged `.inp` confirms TUFLOW keeps
+`Ymax = 0`, `MIN_SURFAREA 25` and `ROUTING_STEP 30`, and handles the
+`[INLETS]` itself. The 2D side is in `results/grids/*_Max.tif` (peak depth,
+level, velocity) and `results/plot/csv/` (plot-output series).
+
+## First comparison (pipe network, SWMM backend)
+
+The volume each pit takes over the 3 h, from TUFLOW's `swmm.rpt` Node Inflow
+Summary compared with the `accepted` column of `run_from_inp.py swmm`:
+
+| | TUFLOW-SWMM | anuga_drainage |
+|---|---|---|
+| total into the pipes | 10,101 m³ (no pit floods) | 27,278 m³ (5,900 m³ floods back) |
+| peak pit inflow | 0.04–0.37 m³/s | 0.07–3.05 m³/s |
+| peak pipe flow, Pipe16 to the outfall | 2.32 m³/s | 6.26 m³/s |
+
+We capture about 2.7 times as much. The gap is worst at the on-grade inlet
+`Pit15` (about 12 times) and at the large sag pits `Pit11`/`Pit13`. This
+points at **inlet capture** as the main difference: SWMM's grate and kerb
+curves (and on-grade bypass) limit a `Combo1` inlet to a few hundred L/s,
+while `calculate_Q`'s orifice on 0.297 m² under deep ponding allows several
+times more. The next step is to match the capture model. Pipe-network
+peaks and flooding are secondary until that's done.
