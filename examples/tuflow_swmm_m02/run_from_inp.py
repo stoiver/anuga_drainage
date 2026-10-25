@@ -18,7 +18,10 @@ head-driven exchange, and by default each pit's surface->pipe flow is capped at
 its SWMM/HEC-22 inlet capacity (anuga_drainage.hec22, built from the .inp's
 [INLETS]/[STREETS] and the inlet-usage layer), as TUFLOW-SWMM does: ON_SAG
 inlets by ponded depth, ON_GRADE inlets by the approaching surface flow.
-``none`` drops the cap (calculate_Q alone).
+``hec22`` treats Combo1 as a grate + curb combination, as EPA SWMM does.
+``tuflow`` reproduces TUFLOW-SWMM 2026.0, which keeps only the last [INLETS]
+line of a design, so Combo1 captures as its curb opening alone. ``none``
+drops the cap (calculate_Q alone).
 
 Culverts: TUFLOW routes the three road culverts (sw01_001.inp) through SWMM;
 here they are ANUGA Boyd culverts between TUFLOW's HX (upstream) and SX
@@ -47,8 +50,8 @@ warnings.filterwarnings("ignore", module="pyogrio")
 backend = sys.argv[1] if len(sys.argv) > 1 else 'swmm'
 finaltime = float(sys.argv[2]) if len(sys.argv) > 2 else 3 * 3600.0   # .tcf End Time == 3 h
 capture = sys.argv[3] if len(sys.argv) > 3 else 'hec22'               # inlet capture cap
-if capture not in ('hec22', 'none'):
-    sys.exit(f'capture must be hec22 or none, got {capture!r}')
+if capture not in ('hec22', 'tuflow', 'none'):
+    sys.exit(f'capture must be hec22, tuflow or none, got {capture!r}')
 run = f'{backend}_{capture}'
 dt = 1.0                       # coupling/yield step (SWMM exchanges at whole seconds)
 outputstep = 300.0             # .tcf Map Output Interval
@@ -162,7 +165,8 @@ coupling = couple_from_inp(domain, inp_path, backend=backend,
                            coupled_junctions=list(inlets),
                            inlet_polygons=inlet_polygons,
                            inlet_specs={name: COMBO1 for name in inlets},
-                           inlet_capture=ti.inlet_captures(inlets) if capture == 'hec22' else None,
+                           inlet_capture=None if capture == 'none' else
+                           ti.inlet_captures(inlets, last_line_wins=capture == 'tuflow'),
                            time_average=10.0, clamp=True,
                            internal_links=4, pipedream_max_step=0.02,
                            log_hydrographs=True)

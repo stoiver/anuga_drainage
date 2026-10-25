@@ -346,13 +346,40 @@ def culverts():
     return out
 
 
-def inlet_captures(inlets=None):
+def _last_inlet_lines(path=SWMM_INP):
+    """{design: type of its last [INLETS] line} (GRATE, CURB, ...)."""
+    last, section = {}, None
+    for line in Path(path).read_text().splitlines():
+        line = line.split(";", 1)[0].strip()
+        if line.startswith("["):
+            section = line.upper()
+        elif line and section == "[INLETS]":
+            name, kind = line.split()[:2]
+            last[name] = kind.upper()
+    return last
+
+
+def inlet_captures(inlets=None, last_line_wins=False):
     """{junction: InletCapture} for each inlet pit: the SWMM/HEC-22 capture
     capacity TUFLOW-SWMM applies, built from sw02's [INLETS]/[STREETS] and the
     inlet-usage layer (placement, longitudinal slope, number, clogging, flow
-    limit, local depression)."""
+    limit, local depression).
+
+    By default a design given on several [INLETS] lines is a combination
+    inlet, as in EPA SWMM. ``last_line_wins=True`` reproduces TUFLOW-SWMM
+    2026.0, which keeps only a design's last line. Module 2's ``Combo1``
+    (GRATE then CURB) then captures as a curb opening alone. This was
+    verified by rerunning TUFLOW with the two lines swapped: the sag pits
+    then match grate-only capture."""
+    import dataclasses
     from anuga_drainage import InletCapture, read_inlet_designs
     designs, streets = read_inlet_designs(SWMM_INP)
+    if last_line_wins:
+        for name, kind in _last_inlet_lines().items():
+            if kind == "CURB":
+                designs[name] = dataclasses.replace(designs[name], grate=None)
+            elif kind == "GRATE":
+                designs[name] = dataclasses.replace(designs[name], curb=None)
     inlets = inlets if inlets is not None else pit_inlets()
     num = lambda v, default=0.0: float(v) if v is not None and np.isfinite(v) else default
     return {name: InletCapture(designs[r.Inlet], streets[r.StreetXSEC],

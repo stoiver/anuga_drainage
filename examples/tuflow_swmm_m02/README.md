@@ -9,7 +9,7 @@ comparison against TUFLOW-SWMM.
 
 ```bash
 python fetch_data.py                         # once: downloads ~100 MB, extracts Module 2
-python run_from_inp.py [swmm|pipedream] [finaltime_s] [hec22|none]   # default: swmm 10800 hec22
+python run_from_inp.py [swmm|pipedream] [finaltime_s] [hec22|tuflow|none]   # default: swmm 10800 hec22
 python compare_tuflow.py                     # against the TUFLOW reference run (below)
 ```
 
@@ -116,3 +116,29 @@ pipes aren't the limit. Fed TUFLOW's own peak depths (`d_Max`), our HEC-22
 equations reproduce TUFLOW's peak capture at the shallow sag pits but give
 0.52–0.68 m³/s at these three, where TUFLOW took 0.25–0.37 m³/s. Something in
 TUFLOW-SWMM limits the capture of deep sag pits.
+
+## TUFLOW keeps only the last `[INLETS]` line
+
+The excess at the deep sag pits is not physics. TUFLOW-SWMM 2026.0 keeps
+only the **last** `[INLETS]` line of a design. `Combo1` is defined as a GRATE
+line then a CURB line, so TUFLOW runs it as a curb opening alone; EPA SWMM
+5.2 combines the two lines into one combination inlet. With depth taken
+above the inlet-usage `Elevation`, TUFLOW's deep sag peaks are exactly the
+curb orifice 0.67·h·L·√(2g·d). The check: rerunning TUFLOW with the two lines
+swapped makes its sag pits match grate-only HEC-22 instead, and its total
+pipe intake goes from 10,101 to 13,785 m³.
+
+`run_from_inp.py ... tuflow` reproduces this (`inlet_captures(last_line_wins=True)`):
+
+| | TUFLOW | SWMM `tuflow` | pipedream `tuflow` |
+|---|---|---|---|
+| total into the pipes | 10,101 m³ | 9,940 m³ (0.98×) | 9,940 m³ (0.98×) |
+| sag pits 2, 6, 10, 11, 13, 18, 19 | | 1.00–1.10× | 1.00–1.10× |
+| shallow sag pits 4, 5 | | 1.36–1.49× | 1.36–1.49× |
+| on-grade pits 7, 9, 15 | | 0.45–0.47× | 0.45–0.47× |
+| peak level, mean ours − TUFLOW | | +0.06 m | +0.06 m |
+
+The two backends agree because the pipes never limit capture. What remains
+is the on-grade inlets, which capture about half of TUFLOW's. TUFLOW drives
+them with a velocity from its 2D cells; we use the approach flow in a ring
+around the pit.
