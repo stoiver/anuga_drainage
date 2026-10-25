@@ -151,19 +151,19 @@ in. An on-grade pit gets two: the cells whose centre cross-hairs its 2d_bc SX
 line crosses, or (Pit9, `Conn_width -2`) the two nearest cells. TUFLOW
 removes water from those cells without zeroing their velocity, and drives
 the on-grade equations with the flow through them.
-`tuflow_inputs.pit_cells()` reproduces the connections. It matches TUFLOW's
-check layer for 11 of the 12 pits; Pit9 is a near-tie that TUFLOW resolves the
-other way. Every footprint is now its TUFLOW cells. The on-grade pits keep
+`tuflow_inputs.pit_cells()` reproduces the connections and matches TUFLOW's
+check layer for every pit. Pit9 needs an explicit override
+(`CELL_OVERRIDES`): its two nearest cell centres are 0.93 and 0.94 cells
+away, and TUFLOW resolves the tie the other way. Every footprint is now its TUFLOW cells. The on-grade pits keep
 their velocity (`inlet_zero_velocity`) and measure the approach flow over
 those cells as mean h|u| × their width (`approach_regions`):
 
 | pits | ratio to TUFLOW (`tuflow` capture, both backends) |
 |---|---|
 | sag 2, 6, 10, 11, 13, 18, 19 | 0.97–1.07 |
-| on-grade 7, 15 | 0.98, 1.13 |
-| on-grade 9 (connected to a different pair of cells) | 0.78 |
+| on-grade 7, 9, 15 | 0.98, 0.91, 1.13 |
 | shallow sag 4, 5 | 1.29–1.37 |
-| **total** | **1.03** (10,418 against 10,101 m³) |
+| **total** | **1.04** (10,472 against 10,101 m³) |
 
 ## GPU and run times
 

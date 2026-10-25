@@ -310,6 +310,9 @@ def pit_inlets():
 GRID_ORIGIN = np.array([292725.0, 6177615.0])            # .tgc Origin
 GRID_XAXIS = np.array([293580.0, 6177415.0]) - GRID_ORIGIN  # .tgc Orientation
 INLET_LINKS = "2d_bc_SWMM_Inlet_Connections_001_L"
+# Pit9's two nearest cell centres are 0.93 and 0.94 cells away: a near-tie
+# that TUFLOW resolves the other way (from its check layer, 1d_to_2d_check_R).
+CELL_OVERRIDES = {"Pit9": [(57, 111), (57, 112)]}
 
 
 def _grid_axes():
@@ -351,9 +354,8 @@ def pit_cells(inlets=None):
     as TUFLOW does it. A pit with a 2d_bc SX line (reached from the pit by a
     CN line) gets the cells whose centre cross-hairs that line crosses;
     ``Conn_width`` -n gets the n cells with centres nearest the pit; otherwise
-    the cell containing the pit (SXZ). This matches TUFLOW's check layer for
-    all pits except Pit9, a near-tie (cell centres 0.93 and 0.94 cells away)
-    that TUFLOW resolves the other way."""
+    the cell containing the pit (SXZ). With ``CELL_OVERRIDES`` for Pit9 (a
+    near-tie), this matches TUFLOW's check layer for every pit."""
     import geopandas as gpd
     inlets = inlets if inlets is not None else pit_inlets()
     links = gpd.read_file(GPKG, layer=INLET_LINKS)
@@ -375,7 +377,7 @@ def pit_cells(inlets=None):
             cand = [(i, j) for i in range(i0 - 2, i0 + 3) for j in range(j0 - 2, j0 + 3)]
             centre = lambda ij: np.hypot(ij[0] + 0.5 - fi[0], ij[1] + 0.5 - fj[0])
             cells = sorted(sorted(cand, key=centre)[:n])
-        out[name] = cells
+        out[name] = CELL_OVERRIDES.get(name, cells)
     return out
 
 
