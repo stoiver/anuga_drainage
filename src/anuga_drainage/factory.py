@@ -91,7 +91,8 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
                     inlet_specs=None, library=None, blockage=0.0,
                     time_average=1.0, clamp=True, cw=0.67, co=0.67,
                     internal_links=20, pit_area=1.0, pipedream_max_step=None,
-                    superlink_kwargs=None, log_hydrographs=False):
+                    superlink_kwargs=None, log_hydrographs=False,
+                    coupled_junctions=None):
     """Build a ready :class:`~anuga_drainage.Coupler` from a SWMM ``.inp``.
 
     Parameters
@@ -123,6 +124,12 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
         (all) or a ``{junction_name: fraction}`` dict. Derates the spec's area and
         perimeter. Ignored for junctions without an ``inlet_specs`` entry.
     time_average, clamp, cw, co : forwarded to the ``Coupler``.
+    coupled_junctions : optional list of ``[JUNCTIONS]`` names to couple to the
+        surface (default: all). The others stay in the 1D network but get no
+        ANUGA inlet — e.g. sealed manholes that only join pipes. Per-junction
+        ``manhole_area`` arrays are still given for *all* junctions, in
+        ``[JUNCTIONS]`` order; ``inlet_polygons`` / ``inlet_specs`` /
+        ``blockage`` keys must be coupled junctions.
     log_hydrographs : if True, attach a :class:`~anuga_drainage.HydrographLogger`
         that records a per-inlet hydrograph each step; access it via
         ``coupling.coupler.logger`` and dump CSVs with ``logger.write_csv(dir)``.
@@ -146,11 +153,21 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
     from .inlet_catalogue import resolve_inlet_spec
 
     inp = read_inp(inp_path)
-    jnames = list(inp.junctions["name"])
-    if not jnames:
+    all_jnames = list(inp.junctions["name"])
+    if not all_jnames:
         raise ValueError(f"{inp_path}: no [JUNCTIONS] to couple")
+    all_areas = _as_array(manhole_area, len(all_jnames))
+    if coupled_junctions is None:
+        jnames = all_jnames
+    else:
+        unknown = set(coupled_junctions) - set(all_jnames)
+        if unknown:
+            raise ValueError(f"coupled_junctions names not in [JUNCTIONS]: {sorted(unknown)}")
+        jnames = [name for name in all_jnames if name in set(coupled_junctions)]
+        if not jnames:
+            raise ValueError("coupled_junctions is empty: nothing to couple")
     coords = inp.coordinates.set_index("node")
-    areas_in = _as_array(manhole_area, len(jnames))
+    areas_in = [all_areas[all_jnames.index(name)] for name in jnames]
     inlet_polygons = inlet_polygons or {}
     unknown = set(inlet_polygons) - set(jnames)
     if unknown:
@@ -220,8 +237,8 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
         sj, sl = inp_to_pipedream(inp, manhole_area=float(footprint_areas[0]), pit_area=pit_area)
         superlink = SuperLink(sl, sj, internal_links=internal_links,
                               **(superlink_kwargs or {}))
-        n_j = len(jnames)
-        coupled = list(range(n_j))                          # junctions are listed first
+        n_j = len(all_jnames)
+        coupled = [all_jnames.index(name) for name in jnames]  # junctions are listed first
         outfalls = list(range(n_j, n_j + len(inp.outfalls)))  # outfalls follow them
         H_bc = superlink._z_inv_j.copy() if outfalls else None  # free-drain outfalls
         be = PipedreamBackend(superlink, coupled_indices=coupled, H_bc=H_bc,

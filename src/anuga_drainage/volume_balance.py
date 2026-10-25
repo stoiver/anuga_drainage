@@ -45,7 +45,8 @@ class VolumeBalance:
     coupling_inlets : the ANUGA Inlet_operators that exchange with the 1D network.
     backend : a Coupler backend (SwmmBackend/PipedreamBackend) exposing
         pipe_volume(), coupling_inflow_volume() and outfall_volume().
-    inflow_operators : the upstream-source Inlet_operators feeding the domain.
+    inflow_operators : the source operators feeding the domain — Inlet_operators
+        and/or Rate_operators (e.g. rainfall).
     """
 
     def __init__(self, domain, coupling_inlets, backend, inflow_operators=(),
@@ -77,7 +78,10 @@ class VolumeBalance:
 
     @staticmethod
     def _applied(ops):
-        return sum(op.get_total_applied_volume() for op in ops)
+        # Inlet_operators report get_total_applied_volume(); Rate_operators
+        # (e.g. rain on the grid) keep the same running total as cumulative_influx.
+        return sum(op.get_total_applied_volume() if hasattr(op, "get_total_applied_volume")
+                   else op.cumulative_influx for op in ops)
 
     def step(self, t, dt=None, coupling_step=None):
         """Record the budget at time ``t`` and return the VolumeRecord.

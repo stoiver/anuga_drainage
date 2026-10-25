@@ -70,6 +70,10 @@ class SwmmBackend:
         if outfalls is None:
             outfalls = [n for n in Nodes(sim) if n.is_outfall()]
         self.outfalls = list(outfalls)
+        # Every node that can hold water, coupled or not (e.g. a sealed manhole
+        # that only joins pipes), so pipe_volume() doesn't depend on which
+        # junctions happen to be coupled to the surface.
+        self.storage_nodes = [n for n in Nodes(sim) if not n.is_outfall()]
         self._old_vol = np.array([self._inlet_vol(n) for n in self.junctions])
         self._outfall_vol = 0.0   # cumulative volume that left the network at outfalls
 
@@ -117,8 +121,9 @@ class SwmmBackend:
 
     # --- independent pipe-side volume accounting (for VolumeBalance) ---
     def pipe_volume(self):
-        """Water currently held in the network: conduits + junction storage."""
-        return self.link_volume() + sum(n.volume for n in self.junctions)
+        """Water currently held in the network: conduits + node storage (all
+        non-outfall nodes, including junctions not coupled to the surface)."""
+        return self.link_volume() + sum(n.volume for n in self.storage_nodes)
 
     def coupling_inflow_volumes(self):
         """Per-junction cumulative net volume the surface injected (lateral
