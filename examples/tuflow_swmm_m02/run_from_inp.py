@@ -31,10 +31,13 @@ crests, and without them it ponds behind the embankments.
 
 Not yet modelled (so this is not a like-for-like TUFLOW comparison yet): the
 2D tailwater on the outfall (held FIXED at 39.5), the HQ rating (a
-free-outflow boundary instead), sub-grid sampling and depth-varying Manning's n.
+free-outflow boundary instead) and sub-grid sampling. Depth-varying Manning's n
+is optional (--depth-varying-n): updated once per coupling step rather than
+every timestep, and on the GPU it needs an anuga with
+Domain.sync_friction_to_device (anuga-community/anuga_core#458).
 
     python run_from_inp.py [swmm|pipedream] [finaltime_s] [hec22|tuflow|none] [--gpu]
-                           [--pipedream-max-step=0.05]
+                           [--pipedream-max-step=0.05] [--depth-varying-n]
                                         # default: swmm 10800 hec22
 """
 import sys
@@ -52,17 +55,18 @@ flags = [a for a in sys.argv[1:] if a.startswith('--')]
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
 gpu = '--gpu' in flags                 # ANUGA's unified compute mode, offloaded to the GPU
 max_step = 0.05                        # pipedream internal step (s); see couple_from_inp
+depth_n = '--depth-varying-n' in flags  # TUFLOW's depth-varying Manning's n, updated each dt
 for f in flags:
     if f.startswith('--pipedream-max-step='):
         max_step = float(f.split('=', 1)[1])
-    elif f != '--gpu':
+    elif f not in ('--gpu', '--depth-varying-n'):
         sys.exit(f'unknown option {f!r}')
 backend = args[0] if len(args) > 0 else 'swmm'
 finaltime = float(args[1]) if len(args) > 1 else 3 * 3600.0   # .tcf End Time == 3 h
 capture = args[2] if len(args) > 2 else 'hec22'               # inlet capture cap
 if capture not in ('hec22', 'tuflow', 'none'):
     sys.exit(f'capture must be hec22, tuflow or none, got {capture!r}')
-run = (f'{backend}_{capture}' + ('_gpu' if gpu else '')
+run = (f'{backend}_{capture}' + ('_gpu' if gpu else '') + ('_dn' if depth_n else '')
        + (f'_ms{max_step:g}' if backend == 'pipedream' and max_step != 0.05 else ''))
 dt = 1.0                       # coupling/yield step (SWMM exchanges at whole seconds)
 outputstep = 300.0             # .tcf Map Output Interval
@@ -131,6 +135,27 @@ domain.set_quantity('stage', expression='elevation')
 mats = ti.read_materials()
 mat = ti.material_ids(cx, cy)
 domain.set_quantity('friction', mats.loc[mat, 'n'].to_numpy(), location='centroids')
+if depth_n:
+    # Pasture, buildings and the vegetated creek have a depth-varying n. It is
+    # updated once per coupling step from the centroid depth (TUFLOW does it
+    # every timestep). Buildings matter most: n 0.02 for a thin film on a roof,
+    # 0.4 once the water is deep enough to be blocked. On the GPU the solver
+    # reads the device copy of friction, so each update is pushed there.
+    sync_friction = getattr(domain, 'sync_friction_to_device', None)
+    if gpu and sync_friction is None:
+        sys.exit('--depth-varying-n with --gpu needs an anuga with '
+                 'Domain.sync_friction_to_device (anuga_core#458): without it '
+                 'the GPU silently keeps the initial n')
+    dn_idx, n_of_depth = ti.depth_varying_n(mats, mat)
+    friction_cv = domain.quantities['friction'].centroid_values
+    stage_cv = domain.quantities['stage'].centroid_values
+    bed_cv = domain.quantities['elevation'].centroid_values
+
+    def update_friction():
+        friction_cv[dn_idx] = n_of_depth(np.maximum(stage_cv[dn_idx] - bed_cv[dn_idx], 0.0))
+        if sync_friction is not None:
+            sync_friction()                  # no-op on the CPU
+    update_friction()
 
 # Rain on the grid: one Rate_operator per distinct loss pair, each applying the
 # hyetograph less that material's initial/continuing loss.
@@ -213,6 +238,8 @@ coupling.add_volume_balance(inflow_operators=[inflow_op, outfall_op, *rain_ops])
 v_out = 0.0
 for t in domain.evolve(yieldstep=dt, outputstep=outputstep, finaltime=finaltime):
     coupling.step(dt)
+    if depth_n:
+        update_friction()
     v_new = coupling.backend.outfall_volume()
     outfall_op.set_Q((v_new - v_out) / dt)      # this step's outfall flow, returned
     v_out = v_new

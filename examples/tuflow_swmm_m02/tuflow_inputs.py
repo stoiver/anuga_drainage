@@ -202,21 +202,37 @@ def read_materials(path=MATERIALS):
     """Materials file -> DataFrame indexed by Material ID with columns
     ``n`` (Manning's n), ``IL`` (mm), ``CL`` (mm/h), ``description``.
 
-    TUFLOW gives some materials a depth-varying n as ``"y1,n1,y2,n2"``; ANUGA's
-    friction is constant per triangle, so the deep-water value ``n2`` is used.
-    That is the right end for ponded/kerb flow near the pits, but over-smooths
-    the shallow sheet flow on pasture (n1=0.1 vs n2=0.06)."""
+    TUFLOW gives some materials a depth-varying n as ``"y1,n1,y2,n2"``: n1 up
+    to depth y1, n2 beyond y2, linear between. ``n`` is the deep-water value
+    n2; the ``y1``/``n1``/``y2``/``n2`` columns keep the whole curve (NaN for
+    a constant n) for :func:`depth_varying_n`."""
     df = pd.read_csv(path)
     df.columns = [c.strip() for c in df.columns]
     rows = []
     for _, r in df.iterrows():
         n = [float(v) for v in str(r["Manning's n"]).split(",")]
         losses = [float(v) for v in str(r["Rainfall Losses"]).split(",")]
+        curve = n if len(n) == 4 else [np.nan] * 4
         rows.append({"id": int(r["Material ID"]),
                      "n": n[3] if len(n) == 4 else n[0],
+                     "y1": curve[0], "n1": curve[1], "y2": curve[2], "n2": curve[3],
                      "IL": losses[0], "CL": losses[1],
                      "description": str(r["! Description"]).lstrip("!")})
     return pd.DataFrame(rows).set_index("id")
+
+
+def depth_varying_n(mats, mat):
+    """For triangles with material ids ``mat``: ``(idx, n_of_depth)``, where
+    ``idx`` are the triangles whose material has a depth-varying n and
+    ``n_of_depth(h)`` gives their n at depths ``h`` (TUFLOW's y1,n1,y2,n2 rule)."""
+    curve = mats.loc[mat, ["y1", "n1", "y2", "n2"]].to_numpy()
+    idx = np.flatnonzero(np.isfinite(curve[:, 0]))
+    y1, n1, y2, n2 = curve[idx].T
+
+    def n_of_depth(h):
+        f = np.clip((h - y1) / (y2 - y1), 0.0, 1.0)
+        return n1 + f * (n2 - n1)
+    return idx, n_of_depth
 
 
 def material_ids(px, py):

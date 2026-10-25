@@ -25,7 +25,7 @@ committing them. The GIS translation needs `geopandas`, `rasterio`,
 |---|---|
 | `2d_code` polygon | mesh bounding polygon (25 m² triangles, 4 m² in the development) |
 | `DEM.tif` → `Read GIS Z Shape` (road crests, MAX) → `Create TIN Zpts` (development) | same order, on the 0.5 m raster; crest lines also used as breaklines |
-| `Read GIS Mat` + materials file | per-triangle Manning's n (deep-water value of TUFLOW's depth-varying n) |
+| `Read GIS Mat` + materials file | per-triangle Manning's n: the deep-water value of TUFLOW's depth-varying n, or with `--depth-varying-n` the full `y1,n1,y2,n2` curve, updated from the depth once per coupling step |
 | `Global Rainfall BC == RF_FC04` + material losses | one `Rate_operator` per loss class; TUFLOW's stepped mm-per-interval hyetograph, less initial (20 mm) and continuing (5 mm/h) loss on pervious materials |
 | `QT` line, `FC01` | `Inlet_operator` just inside the QT line |
 | `HQ` line | free-outflow (`Dirichlet` below the bed) boundary |
@@ -47,7 +47,7 @@ These have to be resolved or quantified before the comparison is meaningful:
   the inlet curves to SWMM directly.
 - The outfall is held FIXED at 39.5 m. TUFLOW drives it with the 2D water level.
 - The HQ rating boundary is replaced by a free outflow.
-- There is no sub-grid sampling, and Manning's n is constant with depth.
+- There is no sub-grid sampling. Manning's n is constant with depth unless `--depth-varying-n` is given; that updates n once per coupling step (TUFLOW does it every timestep). It improves the wet area (cells wet only in TUFLOW fall from 2,092 to 1,753) but not the excess capture at Pits 4 and 5 (1.29× and 1.36×). On the GPU it needs `Domain.sync_friction_to_device` (anuga-community/anuga_core#458).
 - SWMM options: `MIN_SURFAREA` is SWMM's default 1.167 m² and
   `SKIP_STEADY_STATE` is `NO`. TUFLOW's value of 25 m² gave SWMM a 4–13 %
   flow-routing continuity error at these flows; see the comment in
