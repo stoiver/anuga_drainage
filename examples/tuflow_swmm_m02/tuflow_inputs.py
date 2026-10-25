@@ -304,6 +304,91 @@ def pit_inlets():
     return out
 
 
+# --------------------------------------------------------------------------
+# TUFLOW 2D grid and the cells each pit is connected to
+# --------------------------------------------------------------------------
+GRID_ORIGIN = np.array([292725.0, 6177615.0])            # .tgc Origin
+GRID_XAXIS = np.array([293580.0, 6177415.0]) - GRID_ORIGIN  # .tgc Orientation
+INLET_LINKS = "2d_bc_SWMM_Inlet_Connections_001_L"
+
+
+def _grid_axes():
+    ex = GRID_XAXIS / np.hypot(*GRID_XAXIS)
+    return ex, np.array([-ex[1], ex[0]])
+
+
+def grid_cell(i, j):
+    """Corner polygon [[x, y], ...] of TUFLOW cell (i, j)."""
+    ex, ey = _grid_axes()
+    d = TUFLOW_CELL
+    return [list(GRID_ORIGIN + (i + a) * d * ex + (j + b) * d * ey)
+            for a, b in ((0, 0), (1, 0), (1, 1), (0, 1))]
+
+
+def _grid_ij(x, y):
+    """Fractional (i, j) grid coordinates of points."""
+    ex, ey = _grid_axes()
+    r = np.c_[np.atleast_1d(x), np.atleast_1d(y)] - GRID_ORIGIN
+    return r @ ex / TUFLOW_CELL, r @ ey / TUFLOW_CELL
+
+
+def _crosshair_cells(fi, fj):
+    """Cells whose centre cross-hairs a polyline (in grid coordinates)
+    crosses: TUFLOW's cell selection for SX lines."""
+    cells = set()
+    for (i0, j0), (i1, j1) in zip(zip(fi[:-1], fj[:-1]), zip(fi[1:], fj[1:])):
+        for a0, a1, b0, b1, swap in ((i0, i1, j0, j1, False), (j0, j1, i0, i1, True)):
+            lo, hi = sorted((a0, a1))
+            for k in range(int(np.ceil(lo - 0.5)), int(np.floor(hi - 0.5)) + 1):
+                t = (k + 0.5 - a0) / (a1 - a0)        # where the segment crosses k + 0.5
+                other = int(np.floor(b0 + t * (b1 - b0)))
+                cells.add((other, k) if swap else (k, other))
+    return sorted(cells)
+
+
+def pit_cells(inlets=None):
+    """{pit: [(i, j), ...]}: the TUFLOW cells each inlet pit is connected to,
+    as TUFLOW does it. A pit with a 2d_bc SX line (reached from the pit by a
+    CN line) gets the cells whose centre cross-hairs that line crosses;
+    ``Conn_width`` -n gets the n cells with centres nearest the pit; otherwise
+    the cell containing the pit (SXZ). This matches TUFLOW's check layer for
+    all pits except Pit9, a near-tie (cell centres 0.93 and 0.94 cells away)
+    that TUFLOW resolves the other way."""
+    import geopandas as gpd
+    inlets = inlets if inlets is not None else pit_inlets()
+    links = gpd.read_file(GPKG, layer=INLET_LINKS)
+    sx = [g for t, g in zip(links.Type, links.geometry) if t == "SX"]
+    cn = [g for t, g in zip(links.Type, links.geometry) if t == "CN"]
+    out = {}
+    for name, r in inlets.items():
+        p = r.geometry
+        line = None
+        for c in cn:
+            if c.boundary.distance(p) < 0.01:          # CN line starting at this pit
+                line = min(sx, key=lambda g: g.distance(c))
+        if line is not None:
+            cells = _crosshair_cells(*_grid_ij(*np.array(line.coords).T))
+        else:
+            fi, fj = _grid_ij(p.x, p.y)
+            n = int(-r.Conn_width) if np.isfinite(r.Conn_width) and r.Conn_width < 0 else 1
+            i0, j0 = int(fi[0]), int(fj[0])
+            cand = [(i, j) for i in range(i0 - 2, i0 + 3) for j in range(j0 - 2, j0 + 3)]
+            centre = lambda ij: np.hypot(ij[0] + 0.5 - fi[0], ij[1] + 0.5 - fj[0])
+            cells = sorted(sorted(cand, key=centre)[:n])
+        out[name] = cells
+    return out
+
+
+def cells_polygon(cells):
+    """One polygon [[x, y], ...] covering adjacent TUFLOW cells."""
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union
+    u = unary_union([Polygon(grid_cell(*ij)) for ij in cells]).simplify(1e-6)
+    if u.geom_type != "Polygon":
+        raise ValueError(f"cells {cells} are not one connected block")
+    return [list(c) for c in u.exterior.coords[:-1]]
+
+
 CULVERT_INP = MODEL / "swmm" / "sw01_001.inp"
 CULVERT_LINKS = "2d_bc_SWMM_Culvert_Connections_001_L"
 

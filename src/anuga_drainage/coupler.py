@@ -285,12 +285,14 @@ class Coupler:
     the approaching surface flow in (None = the inlet's own region). Inlet
     operators with ``zero_velocity`` zero the momentum inside their region,
     so an on-grade capture needs a ring of triangles just outside it.
+    `approach_widths` optionally gives, per inlet, a flow width [m] (None =
+    the default heuristic; see :meth:`approach_flows`).
     """
 
     def __init__(self, inlets, beds, weir_lengths, manhole_areas, backend,
                  time_average=0.0, clamp=False, safety_factor=1.0,
                  cw=0.67, co=0.67, g=None, logger=None, capture=None,
-                 approach_indices=None):
+                 approach_indices=None, approach_widths=None):
         self.inlets = list(inlets)
         self.beds = np.asarray(beds, dtype=float)
         self.weir_lengths = np.asarray(weir_lengths, dtype=float)
@@ -311,6 +313,11 @@ class Coupler:
                              f"for {len(self.inlets)} inlets")
         self.approach_indices = (list(approach_indices) if approach_indices is not None
                                  else [None] * len(self.inlets))
+        if approach_widths is not None and len(approach_widths) != len(self.inlets):
+            raise ValueError(f"approach_widths has {len(approach_widths)} entries "
+                             f"for {len(self.inlets)} inlets")
+        self.approach_widths = (list(approach_widths) if approach_widths is not None
+                                else [None] * len(self.inlets))
         self.Q_in = np.zeros(len(self.inlets))
 
     def depths(self):
@@ -345,12 +352,26 @@ class Coupler:
         return CouplingStep(Q_in=Q, anuga_flux=flux)
 
     def approach_flows(self):
-        """Surface flow approaching each inlet [m^3/s]: the area-averaged
-        specific discharge (momentum) over the inlet's approach triangles (or
-        its own region) times a representative width (sqrt of the inlet
-        area) -- the same surface-side heuristic as the standalone capture model."""
+        """Surface flow approaching each inlet [m^3/s].
+
+        With an approach width W, this is the area-weighted mean of the
+        specific-discharge magnitude h|u| over the approach triangles, times
+        W: the flow through a strip of that width, as TUFLOW-SWMM sums it
+        over an on-grade inlet's connected cells. Without one, it is the
+        magnitude of the area-averaged momentum over the approach triangles
+        (or the inlet's own region) times sqrt(inlet area), the same
+        surface-side heuristic as the standalone capture model."""
         q = np.empty(len(self.inlets))
-        for k, (op, idx) in enumerate(zip(self.inlets, self.approach_indices)):
+        for k, (op, idx, width) in enumerate(zip(self.inlets, self.approach_indices,
+                                                 self.approach_widths)):
+            if width is not None:
+                dom = op.domain
+                idx = op.inlet.triangle_indices if idx is None else idx
+                a = dom.areas[idx]
+                qmag = np.hypot(dom.quantities['xmomentum'].centroid_values[idx],
+                                dom.quantities['ymomentum'].centroid_values[idx])
+                q[k] = np.dot(qmag, a) / a.sum() * width
+                continue
             if idx is None:
                 uh, vh = op.inlet.get_average_xmom(), op.inlet.get_average_ymom()
             else:

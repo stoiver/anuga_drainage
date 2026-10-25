@@ -232,3 +232,37 @@ def test_couple_from_inp_coupled_junctions_subset_swmm(tmp_path):
     assert [n.nodeid for n in c.backend.junctions] == ["J1"]
     assert sorted(n.nodeid for n in c.backend.storage_nodes) == ["J1", "J2"]
     c.close()
+
+
+def test_couple_from_inp_approach_region_and_zero_velocity(inp_path):
+    # J1 is an on-grade inlet: it keeps its velocity and measures its approach
+    # flow over a 4 m strip; J2 keeps the default zeroed footprint and ring.
+    anuga = pytest.importorskip("anuga")
+    pytest.importorskip("pipedream_solver.hydraulics")
+    from anuga_drainage import couple_from_inp
+
+    domain = _flat_domain(anuga)
+    domain.set_quantity("xmomentum", 0.2)            # uniform h*u = 0.2 m^2/s
+    strip = [[13.0, 3.0], [17.0, 3.0], [17.0, 7.0], [13.0, 7.0]]
+    c = couple_from_inp(domain, inp_path, backend="pipedream", manhole_area=1.0,
+                        internal_links=4,
+                        inlet_capture={"J1": lambda d, q: 1.0, "J2": lambda d, q: 1.0},
+                        approach_regions={"J1": (strip, 4.0)},
+                        inlet_zero_velocity={"J1": False})
+    assert c.inlets["J1"].zero_velocity is False
+    assert c.inlets["J2"].zero_velocity is True
+    assert c.coupler.approach_widths == [4.0, None]
+    assert c.coupler.approach_flows()[0] == pytest.approx(0.2 * 4.0)
+    c.close()
+
+
+@pytest.mark.parametrize("kwarg", ["approach_regions", "inlet_zero_velocity"])
+def test_couple_from_inp_approach_options_reject_unknown_names(inp_path, kwarg):
+    anuga = pytest.importorskip("anuga")
+    pytest.importorskip("pipedream_solver.hydraulics")
+    from anuga_drainage import couple_from_inp
+
+    value = {"nope": ([[0, 0], [1, 0], [1, 1]], 1.0)} if kwarg == "approach_regions" \
+        else {"nope": False}
+    with pytest.raises(ValueError, match=kwarg):
+        couple_from_inp(_flat_domain(anuga), inp_path, backend="pipedream", **{kwarg: value})

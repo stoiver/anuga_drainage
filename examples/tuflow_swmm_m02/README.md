@@ -9,7 +9,8 @@ comparison against TUFLOW-SWMM.
 
 ```bash
 python fetch_data.py                         # once: downloads ~100 MB, extracts Module 2
-python run_from_inp.py [swmm|pipedream] [finaltime_s] [hec22|tuflow|none]   # default: swmm 10800 hec22
+python run_from_inp.py [swmm|pipedream] [finaltime_s] [hec22|tuflow|none] [--gpu] [--pipedream-max-step=0.05]
+                                             # default: swmm 10800 hec22, CPU
 python compare_tuflow.py                     # against the TUFLOW reference run (below)
 ```
 
@@ -141,4 +142,46 @@ pipe intake goes from 10,101 to 13,785 m³.
 The two backends agree because the pipes never limit capture. What remains
 is the on-grade inlets, which capture about half of TUFLOW's. TUFLOW drives
 them with a velocity from its 2D cells; we use the approach flow in a ring
-around the pit.
+around the pit. (Superseded: see the next section.)
+
+## On-grade inlets: TUFLOW's connected cells
+
+TUFLOW connects each pit to whole 5 m cells. A sag pit gets the cell it sits
+in. An on-grade pit gets two: the cells whose centre cross-hairs its 2d_bc SX
+line crosses, or (Pit9, `Conn_width -2`) the two nearest cells. TUFLOW
+removes water from those cells without zeroing their velocity, and drives
+the on-grade equations with the flow through them.
+`tuflow_inputs.pit_cells()` reproduces the connections. It matches TUFLOW's
+check layer for 11 of the 12 pits; Pit9 is a near-tie that TUFLOW resolves the
+other way. Every footprint is now its TUFLOW cells. The on-grade pits keep
+their velocity (`inlet_zero_velocity`) and measure the approach flow over
+those cells as mean h|u| × their width (`approach_regions`):
+
+| pits | ratio to TUFLOW (`tuflow` capture, both backends) |
+|---|---|
+| sag 2, 6, 10, 11, 13, 18, 19 | 0.97–1.07 |
+| on-grade 7, 15 | 0.98, 1.13 |
+| on-grade 9 (connected to a different pair of cells) | 0.78 |
+| shallow sag 4, 5 | 1.29–1.37 |
+| **total** | **1.03** (10,418 against 10,101 m³) |
+
+## GPU and run times
+
+`--gpu` runs ANUGA in its unified compute mode, offloaded to the GPU. The
+inlet, rain and culvert operators all run on the device, and the results are
+identical to the CPU runs. For 3 h on a Ryzen 9 9955HX with an RTX 5070
+Laptop GPU:
+
+| | CPU, 12 threads | GPU |
+|---|---|---|
+| SWMM | 7:49 | 4:24 |
+| pipedream, 0.02 s internal step | 8:42 | 5:03 |
+| pipedream, 0.05 s internal step (default) | | 4:41 |
+| TUFLOW HPC, 4 CPU threads, under Wine | 2:43 | |
+
+The GPU is mostly waiting on the host: the serial Python exchange every 1 s
+and the pipe solver. One pipedream exchange takes 3.5 ms at a 0.02 s internal
+step, almost all of it Python overhead. BLAS threading makes no difference.
+At 0.05 s the results are identical (pit volumes to 0.01 m³, heads within
+1.4 mm), and pipedream's own mass loss falls from 113 to 86 m³. This network
+never surcharges, so 0.05 s is not tested under surcharge.

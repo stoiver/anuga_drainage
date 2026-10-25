@@ -33,7 +33,8 @@ Not yet modelled (so this is not a like-for-like TUFLOW comparison yet): the
 2D tailwater on the outfall (held FIXED at 39.5), the HQ rating (a
 free-outflow boundary instead), sub-grid sampling and depth-varying Manning's n.
 
-    python run_from_inp.py [swmm|pipedream] [finaltime_s] [hec22|none]
+    python run_from_inp.py [swmm|pipedream] [finaltime_s] [hec22|tuflow|none] [--gpu]
+                           [--pipedream-max-step=0.05]
                                         # default: swmm 10800 hec22
 """
 import sys
@@ -47,17 +48,27 @@ import tuflow_inputs as ti
 
 warnings.filterwarnings("ignore", module="pyogrio")
 
-backend = sys.argv[1] if len(sys.argv) > 1 else 'swmm'
-finaltime = float(sys.argv[2]) if len(sys.argv) > 2 else 3 * 3600.0   # .tcf End Time == 3 h
-capture = sys.argv[3] if len(sys.argv) > 3 else 'hec22'               # inlet capture cap
+flags = [a for a in sys.argv[1:] if a.startswith('--')]
+args = [a for a in sys.argv[1:] if not a.startswith('--')]
+gpu = '--gpu' in flags                 # ANUGA's unified compute mode, offloaded to the GPU
+max_step = 0.05                        # pipedream internal step (s); see couple_from_inp
+for f in flags:
+    if f.startswith('--pipedream-max-step='):
+        max_step = float(f.split('=', 1)[1])
+    elif f != '--gpu':
+        sys.exit(f'unknown option {f!r}')
+backend = args[0] if len(args) > 0 else 'swmm'
+finaltime = float(args[1]) if len(args) > 1 else 3 * 3600.0   # .tcf End Time == 3 h
+capture = args[2] if len(args) > 2 else 'hec22'               # inlet capture cap
 if capture not in ('hec22', 'tuflow', 'none'):
     sys.exit(f'capture must be hec22, tuflow or none, got {capture!r}')
-run = f'{backend}_{capture}'
+run = (f'{backend}_{capture}' + ('_gpu' if gpu else '')
+       + (f'_ms{max_step:g}' if backend == 'pipedream' and max_step != 0.05 else ''))
 dt = 1.0                       # coupling/yield step (SWMM exchanges at whole seconds)
 outputstep = 300.0             # .tcf Map Output Interval
 base_area = 25.0               # max triangle area (m^2) — ~ TUFLOW's 5 m cell
 dev_area = 4.0                 # finer in the development, where the pits are
-pit_cell = ti.TUFLOW_CELL      # coupling footprint: one TUFLOW cell per pit (SX)
+pit_cell = ti.TUFLOW_CELL      # TUFLOW cell size: the width of each connected cell
 
 # SWMM's Combo1 inlet (GRATE 0.6 x 0.3 m P_BAR-50 + CURB 0.9 x 0.15 m) as the
 # area/perimeter calculate_Q needs. Orifice area: grate open area (P_BAR-50 is
@@ -94,6 +105,9 @@ domain = anuga.create_domain_from_regions(
     maximum_triangle_area=base_area, interior_regions=interior_regions,
     breaklines=breaklines, use_cache=False, verbose=False)
 domain.set_name(f'tuflow_m02_{run}')
+if gpu:
+    anuga.set_gpu_offload(True, strict=True)   # call before the domain goes unified
+    domain.set_multiprocessor_mode(2)
 domain.set_minimum_storable_height(0.001)
 print(f'Mesh: {domain.number_of_triangles} triangles')
 
@@ -101,16 +115,13 @@ x, y, z = ti.elevation_grid()
 cx, cy = domain.get_centroid_coordinates(absolute=True).T
 zc = ti.elevation_function(x, y, z)(cx, cy)
 
-# Coupling footprints: one TUFLOW cell, aligned with TUFLOW's rotated grid,
-# centred on each inlet pit. The SX "Z" flag lowers that cell to the inlet level.
+# Coupling footprints: the TUFLOW cells each pit is connected to (one for a
+# sag pit, two for an on-grade pit). The SX "Z" flag lowers them to the inlet level.
 inlets = ti.pit_inlets()
-angle = np.arctan2(-200.0, 855.0)            # .tgc Origin -> Orientation
-c, s = np.cos(angle), np.sin(angle)
-square = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]]) * pit_cell / 2
-square = square @ np.array([[c, s], [-s, c]])
+cells = ti.pit_cells(inlets)
 inlet_polygons = {}
 for name, r in inlets.items():
-    poly = (square + [r.geometry.x, r.geometry.y]).tolist()
+    poly = ti.cells_polygon(cells[name])
     inlet_polygons[name] = poly
     mask = contains_xy(Polygon(poly), cx, cy)
     zc[mask] = np.minimum(zc[mask], r.Elevation)
@@ -161,14 +172,22 @@ domain.set_boundary({'outflow': anuga.Dirichlet_boundary([z_out - 1.0, 0.0, 0.0]
 #------------------------------------------------------------------------------
 inp_path = ti.write_swmm_inp(f'sw02_anuga_{run}.inp', finaltime,   # per run: SWMM writes .rpt/.out beside it
                               rims={name: r.Elevation for name, r in inlets.items()})
+# On-grade pits: like TUFLOW's SX cells, the footprint keeps its velocity, and
+# the approach flow is the flow through the connected cells (h|u| times their
+# width across the flow, one cell width each).
+on_grade = [name for name, r in inlets.items() if r.Placement == 'ON_GRADE']
+approach_regions = {name: (inlet_polygons[name], pit_cell * len(cells[name]))
+                    for name in on_grade}
 coupling = couple_from_inp(domain, inp_path, backend=backend,
                            coupled_junctions=list(inlets),
                            inlet_polygons=inlet_polygons,
                            inlet_specs={name: COMBO1 for name in inlets},
                            inlet_capture=None if capture == 'none' else
                            ti.inlet_captures(inlets, last_line_wins=capture == 'tuflow'),
+                           approach_regions=approach_regions if capture != 'none' else None,
+                           inlet_zero_velocity={name: False for name in on_grade},
                            time_average=10.0, clamp=True,
-                           internal_links=4, pipedream_max_step=0.02,
+                           internal_links=4, pipedream_max_step=max_step,
                            log_hydrographs=True)
 print(f'Coupled {len(coupling.inlets)} pits {sorted(coupling.inlets)}; '
       f'sealed: {sorted(set(coupling.inp.junctions.name) - set(inlets))}  '

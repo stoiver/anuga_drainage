@@ -92,7 +92,8 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
                     time_average=1.0, clamp=True, cw=0.67, co=0.67,
                     internal_links=20, pit_area=1.0, pipedream_max_step=None,
                     superlink_kwargs=None, log_hydrographs=False,
-                    coupled_junctions=None, inlet_capture=None):
+                    coupled_junctions=None, inlet_capture=None,
+                    approach_regions=None, inlet_zero_velocity=True):
     """Build a ready :class:`~anuga_drainage.Coupler` from a SWMM ``.inp``.
 
     Parameters
@@ -136,6 +137,18 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
         :class:`~anuga_drainage.hec22.InletCapture` (SWMM/HEC-22 grate and
         curb equations, as TUFLOW-SWMM uses). Junctions without an entry are
         uncapped. Keys must be coupled junctions.
+    approach_regions : optional ``{junction_name: (polygon, width)}`` for capped
+        inlets: measure the approach flow over the triangles in ``polygon`` as
+        their area-weighted mean ``h|u|`` times the flow ``width`` [m], in the
+        way TUFLOW-SWMM sums the flow through an on-grade inlet's connected
+        cells. Without an entry, a capped inlet uses a ring just outside its
+        footprint (see ``Coupler.approach_flows``).
+    inlet_zero_velocity : whether each inlet operator zeroes the velocity in
+        its footprint; True (the default), False, or ``{junction_name: bool}``
+        (missing names default to True). Zeroing keeps a sink stable. An
+        on-grade inlet's footprint can keep its velocity (False), so that
+        flow passes over the inlet and can be measured there, as it does over
+        TUFLOW's SX cells.
     log_hydrographs : if True, attach a :class:`~anuga_drainage.HydrographLogger`
         that records a per-inlet hydrograph each step; access it via
         ``coupling.coupler.logger`` and dump CSVs with ``logger.write_csv(dir)``.
@@ -184,6 +197,13 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
     unknown = set(inlet_specs) - set(jnames)
     if unknown:
         raise ValueError(f"inlet_specs names not in [JUNCTIONS]: {sorted(unknown)}")
+    approach_regions = approach_regions or {}
+    for arg, keys in (("approach_regions", approach_regions),
+                      ("inlet_zero_velocity",
+                       inlet_zero_velocity if isinstance(inlet_zero_velocity, dict) else {})):
+        unknown = set(keys) - set(jnames)
+        if unknown:
+            raise ValueError(f"{arg} names not coupled junctions: {sorted(unknown)}")
     specs = {name: resolve_inlet_spec(
                 ref, library,
                 blockage[name] if isinstance(blockage, dict) else blockage)
@@ -213,8 +233,10 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
             eff_area = float(area)
             weir = n_sides * side
             expand = True   # a small auto polygon may not contain a cell centroid
+        zero_vel = (inlet_zero_velocity.get(name, True)
+                    if isinstance(inlet_zero_velocity, dict) else bool(inlet_zero_velocity))
         op = Inlet_operator(domain, Region(domain, polygon=vertices, expand_polygon=expand),
-                            Q=0.0, zero_velocity=True)
+                            Q=0.0, zero_velocity=zero_vel)
         inlets.append(op)
         footprints.append(vertices)
         beds.append(op.inlet.get_average_elevation())
@@ -259,13 +281,24 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
     if unknown:
         raise ValueError(f"inlet_capture names not coupled junctions: {sorted(unknown)}")
     capture = [inlet_capture.get(name) for name in jnames] if inlet_capture else None
-    # The inlet operators zero the momentum inside their footprint, so a
-    # capped inlet measures its approach flow in a ring just outside it: the
+    # A capped inlet measures its approach flow over its approach_regions
+    # entry if it has one. Otherwise, because the inlet operators zero the
+    # momentum inside their footprint, it uses a ring just outside it: the
     # footprint scaled x3 about its centre, less the footprint itself.
-    approach = None
+    approach = widths = None
     if inlet_capture:
-        approach = []
+        approach, widths = [], []
         for name, op, verts in zip(jnames, inlets, footprints):
+            if name in approach_regions:
+                polygon, width = approach_regions[name]
+                idx = Region(domain, polygon=[list(map(float, p)) for p in polygon],
+                             expand_polygon=True).indices
+                if not len(idx):
+                    raise ValueError(f"approach region of {name!r} contains no triangles")
+                approach.append(np.asarray(idx))
+                widths.append(float(width))
+                continue
+            widths.append(None)
             if name not in inlet_capture:
                 approach.append(None)
                 continue
@@ -279,6 +312,7 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
     coupler = Coupler(inlets=inlets, beds=beds, weir_lengths=hyd_weirs,
                       manhole_areas=hyd_areas, backend=be,
                       time_average=time_average, clamp=clamp, cw=cw, co=co,
-                      logger=logger, capture=capture, approach_indices=approach)
+                      logger=logger, capture=capture, approach_indices=approach,
+                      approach_widths=widths)
     return Coupling(coupler=coupler, inlets=dict(zip(jnames, inlets)),
                     backend=be, handle=handle, inp=inp, domain=domain)

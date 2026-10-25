@@ -198,3 +198,31 @@ def test_coupler_approach_flow_measured_in_given_triangles():
             capture=[lambda d, q: seen.append(q) or 1.0],
             approach_indices=[np.array([1, 2])]).step(dt=1.0)
     assert seen == [pytest.approx(1.0)]
+
+
+def test_coupler_approach_width_sums_flow_magnitude():
+    # With a width the approach is the area-weighted mean of h|u| times the
+    # width: opposing flows don't cancel (unlike the vector mean).
+    class _Q:
+        def __init__(self, v):
+            self.centroid_values = np.asarray(v, dtype=float)
+
+    class _Dom:
+        areas = np.array([1.0, 1.0, 2.0])
+        quantities = {"xmomentum": _Q([0.0, 0.3, -0.3]), "ymomentum": _Q([0.0, 0.4, -0.4])}
+
+    inlet = _MovingInlet(0.3, 10.0, area=4.0)
+    inlet.domain = _Dom()
+    seen = []
+    Coupler([inlet], beds=[0.0], weir_lengths=[2.0], manhole_areas=[1.0],
+            backend=_FakeBackend(heads=[-1.0]), g=9.81,
+            capture=[lambda d, q: seen.append(q) or 1.0],
+            approach_indices=[np.array([1, 2])], approach_widths=[10.0]).step(dt=1.0)
+    assert seen == [pytest.approx(0.5 * 10.0)]
+
+
+def test_coupler_approach_widths_length_must_match_inlets():
+    with pytest.raises(ValueError, match="approach_widths"):
+        Coupler([_MovingInlet(1.0, 1.0)], beds=[0.0], weir_lengths=[1.0],
+                manhole_areas=[1.0], backend=_FakeBackend(heads=[0.0]),
+                approach_widths=[None, None])
