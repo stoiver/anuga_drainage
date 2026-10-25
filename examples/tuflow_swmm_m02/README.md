@@ -9,7 +9,8 @@ comparison against TUFLOW-SWMM.
 
 ```bash
 python fetch_data.py                         # once: downloads ~100 MB, extracts Module 2
-python run_from_inp.py [swmm|pipedream] [finaltime_s]   # default: swmm 10800
+python run_from_inp.py [swmm|pipedream] [finaltime_s] [hec22|none]   # default: swmm 10800 hec22
+python compare_tuflow.py                     # against the TUFLOW reference run (below)
 ```
 
 The data are free to download and run, but have no redistribution licence, so
@@ -32,15 +33,17 @@ committing them. The GIS translation needs `geopandas`, `rasterio`,
 | `SXZ` pit connections | one TUFLOW-cell (5 × 5 m) footprint per pit, lowered to the inlet elevation |
 | `Combo1` (grate 0.6 × 0.3 P_BAR-50 + kerb 0.9 × 0.15) | `InletSpec`: orifice area 0.297 m², weir length 1.5 m |
 | outfall `SX` line | the outfall flow is returned to the 2D along that line |
+| `[INLETS]`/`[STREETS]` (SWMM 5.2 HEC-22 capture) | `InletCapture` (`anuga_drainage.hec22`, a port of SWMM's `inlet.c`) caps each pit's draw: sag inlets on the 2D depth, on-grade inlets on the approach flow measured in a ring around the pit |
+| culverts `sw01_001.inp` + `2d_bc_SWMM_Culvert_Connections` | ANUGA `Boyd_box_operator`/`Boyd_pipe_operator` between the HX and SX lines, with the `.inp`'s barrels, section, inverts, n and entry+exit losses |
 
 ## Known differences from the TUFLOW run
 
 These have to be resolved or quantified before the comparison is meaningful:
 
-- The three SWMM culverts (`sw01_001.inp`) are left out. They use `[STORAGE]`
-  nodes, which `read_inp` doesn't parse yet.
-- Inlet capture uses `calculate_Q`'s weir/orifice equations, not SWMM's
-  grate/kerb capture curves. The three on-grade inlets are treated as sag inlets.
+- The three culverts are ANUGA Boyd culverts, not SWMM conduits with
+  `[STORAGE]` nodes. They carry 638,700 m³ against TUFLOW's 671,300 m³.
+- The HEC-22 capture is a cap on `calculate_Q`'s exchange flow. TUFLOW gives
+  the inlet curves to SWMM directly.
 - The outfall is held FIXED at 39.5 m. TUFLOW drives it with the 2D water level.
 - The HQ rating boundary is replaced by a free outflow.
 - There is no sub-grid sampling, and Manning's n is constant with depth.
@@ -91,3 +94,25 @@ curves (and on-grade bypass) limit a `Combo1` inlet to a few hundred L/s,
 while `calculate_Q`'s orifice on 0.297 m² under deep ponding allows several
 times more. The next step is to match the capture model. Pipe-network
 peaks and flooding are secondary until that's done.
+
+## With HEC-22 capture and the culverts
+
+`python run_from_inp.py {swmm,pipedream} 10800 hec22`, then `python compare_tuflow.py`:
+
+| | TUFLOW | SWMM | pipedream |
+|---|---|---|---|
+| total into the pipes | 10,101 m³ | 15,581 m³ (1.54×) | 13,967 m³ (1.38×) |
+| peak level, mean ours − TUFLOW (wet in both) | | +0.04 m | +0.05 m |
+| peak level, 90th percentile of the absolute difference | | 0.16 m | 0.16 m |
+
+The culverts brought the 2D model into line: without them the creek ponded
+behind the road embankments and peak levels were 0.22 m high on average. At
+the pits, peak levels now agree within a few cm. The on-grade pits (7, 9, 15)
+are within about 10 %, and the shallow sag pits are close too.
+
+The remaining excess is at the deep low-point sag pits `Pit10`/`Pit11`/`Pit13`:
+1.4 to 1.8 times TUFLOW's volume. Neither SWMM report shows surcharge, so the
+pipes aren't the limit. Fed TUFLOW's own peak depths (`d_Max`), our HEC-22
+equations reproduce TUFLOW's peak capture at the shallow sag pits but give
+0.52–0.68 m³/s at these three, where TUFLOW took 0.25–0.37 m³/s. Something in
+TUFLOW-SWMM limits the capture of deep sag pits.

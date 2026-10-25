@@ -1,4 +1,6 @@
 # TUFLOW tutorial data: fetched by fetch_data.py, not redistributable here
 tuflow_data/
 # generated from tuflow_data by run_from_inp.py
-sw02_anuga.inp
+sw02_anuga*.inp
+# run outputs: per-pit summaries for compare_tuflow.py
+pits_*.csv

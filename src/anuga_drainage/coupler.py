@@ -274,11 +274,23 @@ class Coupler:
     `inlets` are ANUGA Inlet_operators, ordered to match the backend's heads
     (the SWMM junction order / pipedream superjunction order). `beds`,
     `weir_lengths` and `manhole_areas` are parallel arrays for calculate_Q.
+
+    `capture` optionally caps each inlet's surface->pipe flow at its inlet
+    capacity: one entry per inlet, each None (no cap) or a callable
+    ``capture(depth, approach_Q) -> m^3/s`` such as
+    :class:`~anuga_drainage.hec22.InletCapture`. calculate_Q still sets the
+    head-driven exchange (and all surcharge); the cap only limits capture.
+
+    `approach_indices` optionally gives, per inlet, the triangles to measure
+    the approaching surface flow in (None = the inlet's own region). Inlet
+    operators with ``zero_velocity`` zero the momentum inside their region,
+    so an on-grade capture needs a ring of triangles just outside it.
     """
 
     def __init__(self, inlets, beds, weir_lengths, manhole_areas, backend,
                  time_average=0.0, clamp=False, safety_factor=1.0,
-                 cw=0.67, co=0.67, g=None, logger=None):
+                 cw=0.67, co=0.67, g=None, logger=None, capture=None,
+                 approach_indices=None):
         self.inlets = list(inlets)
         self.beds = np.asarray(beds, dtype=float)
         self.weir_lengths = np.asarray(weir_lengths, dtype=float)
@@ -291,6 +303,14 @@ class Coupler:
         self.co = co
         self.g = g  # gravity for calculate_Q; None -> ANUGA's value (see calculate_Q)
         self.logger = logger  # optional HydrographLogger; records each step if set
+        if capture is not None and len(capture) != len(self.inlets):
+            raise ValueError(f"capture has {len(capture)} entries for {len(self.inlets)} inlets")
+        self.capture = list(capture) if capture is not None else None
+        if approach_indices is not None and len(approach_indices) != len(self.inlets):
+            raise ValueError(f"approach_indices has {len(approach_indices)} entries "
+                             f"for {len(self.inlets)} inlets")
+        self.approach_indices = (list(approach_indices) if approach_indices is not None
+                                 else [None] * len(self.inlets))
         self.Q_in = np.zeros(len(self.inlets))
 
     def depths(self):
@@ -306,6 +326,8 @@ class Coupler:
 
         Q = calculate_Q(heads, depths, self.beds, self.weir_lengths,
                         self.manhole_areas, cw=self.cw, co=self.co, g=self.g)
+        if self.capture is not None:
+            Q = self._limit_capture(Q, depths)
         Q = smooth_Q(Q, self.Q_in, dt, self.time_average)
         if self.clamp:
             Q = limit_outflow(Q, self.volumes(), dt, self.safety_factor)
@@ -322,16 +344,31 @@ class Coupler:
 
         return CouplingStep(Q_in=Q, anuga_flux=flux)
 
-    def _log_step(self, dt, depths, heads, Q):
-        """Feed one row per inlet to the hydrograph logger.
+    def approach_flows(self):
+        """Surface flow approaching each inlet [m^3/s]: the area-averaged
+        specific discharge (momentum) over the inlet's approach triangles (or
+        its own region) times a representative width (sqrt of the inlet
+        area) -- the same surface-side heuristic as the standalone capture model."""
+        q = np.empty(len(self.inlets))
+        for k, (op, idx) in enumerate(zip(self.inlets, self.approach_indices)):
+            if idx is None:
+                uh, vh = op.inlet.get_average_xmom(), op.inlet.get_average_ymom()
+            else:
+                dom = op.domain
+                a = dom.areas[idx]
+                uh = np.dot(dom.quantities['xmomentum'].centroid_values[idx], a) / a.sum()
+                vh = np.dot(dom.quantities['ymomentum'].centroid_values[idx], a) / a.sum()
+            q[k] = np.hypot(uh, vh) * np.sqrt(op.inlet.get_area())
+        return q
 
-        Approach flow is estimated per inlet from the region-averaged specific
-        discharge (momentum) times a representative width (sqrt of the inlet
-        area) -- the same surface-side heuristic as the standalone capture model.
-        """
-        uh = np.array([op.inlet.get_average_xmom() for op in self.inlets])
-        vh = np.array([op.inlet.get_average_ymom() for op in self.inlets])
-        widths = np.sqrt([op.inlet.get_area() for op in self.inlets])
-        approach = np.sqrt(uh ** 2 + vh ** 2) * widths
+    def _limit_capture(self, Q, depths):
+        """Cap positive (surface->pipe) Q at each inlet's capture capacity."""
+        approach = self.approach_flows()
+        cap = np.array([np.inf if c is None else c(d, a)
+                        for c, d, a in zip(self.capture, depths, approach)])
+        return np.where(Q > 0, np.minimum(Q, cap), Q)
+
+    def _log_step(self, dt, depths, heads, Q):
+        """Feed one row per inlet to the hydrograph logger."""
         time = self.inlets[0].domain.get_time() if self.inlets else 0.0
-        self.logger.record(time, dt, depths, heads, approach, Q)
+        self.logger.record(time, dt, depths, heads, self.approach_flows(), Q)

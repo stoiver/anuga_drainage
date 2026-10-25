@@ -13,14 +13,25 @@ with an upstream creek inflow. The inputs are TUFLOW's own (fetch them first wit
   coupled to the surface; Pit3/Pit17 are sealed manholes (pipe-only). The
   outfall discharges back onto the 2D creek bank along TUFLOW's SX line.
 
-Not yet modelled (so this is not a like-for-like TUFLOW comparison yet): the
-three SWMM culverts (sw01_001.inp), SWMM's inlet capture curves (we use
-calculate_Q's weir/orifice with an equivalent Combo1 InletSpec; on-grade inlets
-are treated as sag), the 2D tailwater on the outfall (held FIXED at 39.5), the
-HQ rating (a free-outflow boundary instead), sub-grid sampling and
-depth-varying Manning's n.
+Inlet capture: calculate_Q (with an equivalent Combo1 InletSpec) sets the
+head-driven exchange, and by default each pit's surface->pipe flow is capped at
+its SWMM/HEC-22 inlet capacity (anuga_drainage.hec22, built from the .inp's
+[INLETS]/[STREETS] and the inlet-usage layer), as TUFLOW-SWMM does: ON_SAG
+inlets by ponded depth, ON_GRADE inlets by the approaching surface flow.
+``none`` drops the cap (calculate_Q alone).
 
-    python run_from_inp.py [swmm|pipedream] [finaltime_s]   # default: swmm 10800
+Culverts: TUFLOW routes the three road culverts (sw01_001.inp) through SWMM;
+here they are ANUGA Boyd culverts between TUFLOW's HX (upstream) and SX
+(downstream) connection lines, with the .inp's barrels, sections, inverts,
+roughness and losses. They matter: they carry the creek under the raised road
+crests, and without them it ponds behind the embankments.
+
+Not yet modelled (so this is not a like-for-like TUFLOW comparison yet): the
+2D tailwater on the outfall (held FIXED at 39.5), the HQ rating (a
+free-outflow boundary instead), sub-grid sampling and depth-varying Manning's n.
+
+    python run_from_inp.py [swmm|pipedream] [finaltime_s] [hec22|none]
+                                        # default: swmm 10800 hec22
 """
 import sys
 import warnings
@@ -35,6 +46,10 @@ warnings.filterwarnings("ignore", module="pyogrio")
 
 backend = sys.argv[1] if len(sys.argv) > 1 else 'swmm'
 finaltime = float(sys.argv[2]) if len(sys.argv) > 2 else 3 * 3600.0   # .tcf End Time == 3 h
+capture = sys.argv[3] if len(sys.argv) > 3 else 'hec22'               # inlet capture cap
+if capture not in ('hec22', 'none'):
+    sys.exit(f'capture must be hec22 or none, got {capture!r}')
+run = f'{backend}_{capture}'
 dt = 1.0                       # coupling/yield step (SWMM exchanges at whole seconds)
 outputstep = 300.0             # .tcf Map Output Interval
 base_area = 25.0               # max triangle area (m^2) — ~ TUFLOW's 5 m cell
@@ -75,7 +90,7 @@ domain = anuga.create_domain_from_regions(
     polygon, boundary_tags=ti.boundary_tags(polygon, hq_line, 'outflow'),
     maximum_triangle_area=base_area, interior_regions=interior_regions,
     breaklines=breaklines, use_cache=False, verbose=False)
-domain.set_name(f'tuflow_m02_{backend}')
+domain.set_name(f'tuflow_m02_{run}')
 domain.set_minimum_storable_height(0.001)
 print(f'Mesh: {domain.number_of_triangles} triangles')
 
@@ -121,6 +136,18 @@ qt = next(o for o in (qt.offset_curve(d) for d in (2.0, -2.0))
 inflow_op = anuga.Inlet_operator(domain, [list(qt.coords[0]), list(qt.coords[-1])],
                                  Q=ti.hydrograph('FC01'))
 
+# Road culverts (sw01_001.inp) as Boyd culverts between TUFLOW's HX/SX lines.
+culvert_ops = []
+for cv in ti.culverts():
+    common = dict(losses=cv['losses'], barrels=cv['barrels'], manning=cv['n'],
+                  exchange_lines=cv['exchange_lines'], invert_elevations=cv['inverts'],
+                  label=cv['name'])
+    if cv['shape'] == 'CIRCULAR':
+        culvert_ops.append(anuga.Boyd_pipe_operator(domain, diameter=cv['height'], **common))
+    else:
+        culvert_ops.append(anuga.Boyd_box_operator(domain, width=cv['width'],
+                                                   height=cv['height'], **common))
+
 # HQ boundary approximated by a free outflow (stage below the bed); walls elsewhere.
 z_out = zc[domain.tri_full_flag.astype(bool)].min()
 domain.set_boundary({'outflow': anuga.Dirichlet_boundary([z_out - 1.0, 0.0, 0.0]),
@@ -129,17 +156,19 @@ domain.set_boundary({'outflow': anuga.Dirichlet_boundary([z_out - 1.0, 0.0, 0.0]
 #------------------------------------------------------------------------------
 # 2. Coupling inlets + 1D network
 #------------------------------------------------------------------------------
-inp_path = ti.write_swmm_inp('sw02_anuga.inp', finaltime,
+inp_path = ti.write_swmm_inp(f'sw02_anuga_{run}.inp', finaltime,   # per run: SWMM writes .rpt/.out beside it
                               rims={name: r.Elevation for name, r in inlets.items()})
 coupling = couple_from_inp(domain, inp_path, backend=backend,
                            coupled_junctions=list(inlets),
                            inlet_polygons=inlet_polygons,
                            inlet_specs={name: COMBO1 for name in inlets},
+                           inlet_capture=ti.inlet_captures(inlets) if capture == 'hec22' else None,
                            time_average=10.0, clamp=True,
                            internal_links=4, pipedream_max_step=0.02,
                            log_hydrographs=True)
 print(f'Coupled {len(coupling.inlets)} pits {sorted(coupling.inlets)}; '
-      f'sealed: {sorted(set(coupling.inp.junctions.name) - set(inlets))}  (backend={backend})')
+      f'sealed: {sorted(set(coupling.inp.junctions.name) - set(inlets))}  '
+      f'(backend={backend}, capture={capture})')
 
 # The outfall discharges back onto the 2D creek bank along TUFLOW's SX line.
 _, sx_line = next((r.Type, [list(c[:2]) for c in r.geometry.coords])
@@ -173,6 +202,8 @@ for t in domain.evolve(yieldstep=dt, outputstep=outputstep, finaltime=finaltime)
 print()
 print(coupling.volume_balance.summary())
 rain = sum(op.cumulative_influx for op in rain_ops)
+for op in culvert_ops:
+    print(f'Culvert {op.label}: {op.accumulated_flow:.0f} m^3')
 print(f'Rain applied {rain:.0f} m^3, FC01 inflow {inflow_op.get_total_applied_volume():.0f} m^3, '
       f'pipe outfall {coupling.backend.outfall_volume():.0f} m^3')
 
@@ -181,12 +212,18 @@ print(f'Rain applied {rain:.0f} m^3, FC01 inflow {inflow_op.get_total_applied_vo
 # flooding back out) — the difference is the pit rejecting/overflowing.
 logger = coupling.coupler.logger
 accepted = dict(zip(coupling.inlets, coupling.backend.coupling_inflow_volumes()))
+rows = []
 print(f'\n{"pit":6s} {"peak draw":>11s} {"requested":>11s} {"accepted":>11s}')
 for name in sorted(coupling.inlets, key=lambda n: int(n[3:])):
     df = logger.to_dataframe(name)
     requested = df.Cum_Captured_m3.iloc[-1] - df.Cum_Surcharged_m3.iloc[-1]
+    rows.append({'pit': name, 'peak_draw_cms': df.Captured_Q_cms.max(),
+                 'requested_m3': requested, 'accepted_m3': accepted[name]})
     print(f'{name:6s} {df.Captured_Q_cms.max():6.3f} m3/s {requested:8.1f} m3 {accepted[name]:8.1f} m3')
-paths = logger.write_csv(f'hydrographs_{backend}')
-print(f'Wrote {len(paths)} hydrograph CSV(s) to hydrographs_{backend}/')
+# Per-pit summary for compare_tuflow.py.
+import pandas as pd
+pd.DataFrame(rows).to_csv(f'pits_{run}.csv', index=False)
+paths = logger.write_csv(f'hydrographs_{run}')
+print(f'Wrote {len(paths)} hydrograph CSV(s) to hydrographs_{run}/')
 
 coupling.close()

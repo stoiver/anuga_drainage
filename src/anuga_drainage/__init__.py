@@ -17,3 +17,13 @@ from .inlet_catalogue import (
     resolve_inlet_spec,
 )
 from .hydrograph import HydrographLogger
+from .hec22 import (
+    InletCapture,
+    InletDesign,
+    Grate,
+    Curb,
+    Street,
+    sag_capture,
+    on_grade_capture,
+    read_inlet_designs,
+)

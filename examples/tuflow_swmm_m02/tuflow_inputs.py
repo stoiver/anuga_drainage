@@ -304,6 +304,66 @@ def pit_inlets():
     return out
 
 
+CULVERT_INP = MODEL / "swmm" / "sw01_001.inp"
+CULVERT_LINKS = "2d_bc_SWMM_Culvert_Connections_001_L"
+
+
+def culverts():
+    """The three road culverts of sw01_001.inp as ANUGA Boyd-culvert parameters.
+
+    Each is a SWMM conduit from a [STORAGE] node, which TUFLOW connects to the
+    2D upstream with an HX line, to an [OUTFALLS] node, which it connects
+    downstream with an SX line. Returns a list of dicts: ``name``, ``shape``
+    (RECT_CLOSED/CIRCULAR), ``height``, ``width``, ``barrels``, ``length``,
+    ``n``, ``losses`` (entry + exit), ``inverts`` (up, down, incl. offsets)
+    and ``exchange_lines`` ([HX line, SX line])."""
+    import shapely
+    from anuga_drainage.inp import _read_sections
+    sec = _read_sections(CULVERT_INP)
+    elev = {r[0]: float(r[1]) for r in sec.get("STORAGE", []) + sec.get("OUTFALLS", [])}
+    xy = {r[0]: (float(r[1]), float(r[2])) for r in sec["COORDINATES"]}
+    xs = {r[0]: r for r in sec["XSECTIONS"]}
+    loss = {r[0]: float(r[1]) + float(r[2]) for r in sec.get("LOSSES", [])}
+    links = _layer(CULVERT_LINKS)
+    lines = {t: [g for g in links.geometry[links.Type == t]] for t in ("HX", "SX")}
+
+    def nearest(kind, node):
+        p = shapely.Point(xy[node])
+        g = min(lines[kind], key=p.distance)
+        if p.distance(g) > 10.0:
+            raise ValueError(f"no {kind} line near culvert node {node}")
+        return [list(c[:2]) for c in g.coords]
+
+    out = []
+    for name, up, down, length, n, in_off, out_off, *_ in sec["CONDUITS"]:
+        shape, g1, g2, *rest = xs[name][1:]
+        out.append({"name": name, "shape": shape.upper(), "height": float(g1),
+                    "width": float(g2) if shape.upper() == "RECT_CLOSED" else float(g1),
+                    "barrels": int(rest[2]) if len(rest) > 2 else 1,
+                    "length": float(length), "n": float(n), "losses": loss.get(name, 0.0),
+                    "inverts": [elev[up] + float(in_off), elev[down] + float(out_off)],
+                    "exchange_lines": [nearest("HX", up), nearest("SX", down)]})
+    return out
+
+
+def inlet_captures(inlets=None):
+    """{junction: InletCapture} for each inlet pit: the SWMM/HEC-22 capture
+    capacity TUFLOW-SWMM applies, built from sw02's [INLETS]/[STREETS] and the
+    inlet-usage layer (placement, longitudinal slope, number, clogging, flow
+    limit, local depression)."""
+    from anuga_drainage import InletCapture, read_inlet_designs
+    designs, streets = read_inlet_designs(SWMM_INP)
+    inlets = inlets if inlets is not None else pit_inlets()
+    num = lambda v, default=0.0: float(v) if v is not None and np.isfinite(v) else default
+    return {name: InletCapture(designs[r.Inlet], streets[r.StreetXSEC],
+                               placement=r.Placement,
+                               long_slope=num(r.SlopePct_Longitudinal) / 100.0,
+                               number=int(num(r.Number, 1)),
+                               clogged_pct=num(r.CloggedPct), q_max=num(r.Qmax),
+                               local_depression=num(r.aLocal), local_width=num(r.wLocal))
+            for name, r in inlets.items()}
+
+
 # TUFLOW's options from the culvert .inp (sw01; TUFLOW merges [OPTIONS] across
 # the .inp files) with the timing and ponding changed for pyswmm + our coupling:
 # whole-second routing (pyswmm 2.1 strides in int seconds), and no ponding, so

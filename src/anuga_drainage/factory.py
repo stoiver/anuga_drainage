@@ -92,7 +92,7 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
                     time_average=1.0, clamp=True, cw=0.67, co=0.67,
                     internal_links=20, pit_area=1.0, pipedream_max_step=None,
                     superlink_kwargs=None, log_hydrographs=False,
-                    coupled_junctions=None):
+                    coupled_junctions=None, inlet_capture=None):
     """Build a ready :class:`~anuga_drainage.Coupler` from a SWMM ``.inp``.
 
     Parameters
@@ -130,6 +130,12 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
         ``manhole_area`` arrays are still given for *all* junctions, in
         ``[JUNCTIONS]`` order; ``inlet_polygons`` / ``inlet_specs`` /
         ``blockage`` keys must be coupled junctions.
+    inlet_capture : optional ``{junction_name: capture}`` capping that inlet's
+        surface->pipe flow at its inlet capacity each step, where ``capture``
+        is a callable ``capture(depth, approach_Q) -> m^3/s`` such as a
+        :class:`~anuga_drainage.hec22.InletCapture` (SWMM/HEC-22 grate and
+        curb equations, as TUFLOW-SWMM uses). Junctions without an entry are
+        uncapped. Keys must be coupled junctions.
     log_hydrographs : if True, attach a :class:`~anuga_drainage.HydrographLogger`
         that records a per-inlet hydrograph each step; access it via
         ``coupling.coupler.logger`` and dump CSVs with ``logger.write_csv(dir)``.
@@ -188,7 +194,7 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
     # pipedream storage area). The *hydraulic* area/perimeter fed to calculate_Q
     # come from an assigned inlet_spec if any, else the footprint geometry — so a
     # small grate opening drives the flux without shrinking the footprint.
-    inlets, beds = [], []
+    inlets, beds, footprints = [], [], []
     footprint_areas, hyd_weirs, hyd_areas = [], [], []
     for name, area in zip(jnames, areas_in):
         if name in inlet_polygons:
@@ -210,6 +216,7 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
         op = Inlet_operator(domain, Region(domain, polygon=vertices, expand_polygon=expand),
                             Q=0.0, zero_velocity=True)
         inlets.append(op)
+        footprints.append(vertices)
         beds.append(op.inlet.get_average_elevation())
         footprint_areas.append(eff_area)
         spec = specs.get(name)
@@ -247,10 +254,31 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
     else:
         raise ValueError(f"backend must be 'swmm' or 'pipedream', got {backend!r}")
 
+    inlet_capture = inlet_capture or {}
+    unknown = set(inlet_capture) - set(jnames)
+    if unknown:
+        raise ValueError(f"inlet_capture names not coupled junctions: {sorted(unknown)}")
+    capture = [inlet_capture.get(name) for name in jnames] if inlet_capture else None
+    # The inlet operators zero the momentum inside their footprint, so a
+    # capped inlet measures its approach flow in a ring just outside it: the
+    # footprint scaled x3 about its centre, less the footprint itself.
+    approach = None
+    if inlet_capture:
+        approach = []
+        for name, op, verts in zip(jnames, inlets, footprints):
+            if name not in inlet_capture:
+                approach.append(None)
+                continue
+            v = np.asarray(verts, dtype=float)
+            ring = v.mean(axis=0) + 3.0 * (v - v.mean(axis=0))
+            idx = np.setdiff1d(Region(domain, polygon=ring.tolist()).indices,
+                               op.inlet.triangle_indices)
+            approach.append(idx if idx.size else None)
+
     logger = HydrographLogger(jnames) if log_hydrographs else None
     coupler = Coupler(inlets=inlets, beds=beds, weir_lengths=hyd_weirs,
                       manhole_areas=hyd_areas, backend=be,
                       time_average=time_average, clamp=clamp, cw=cw, co=co,
-                      logger=logger)
+                      logger=logger, capture=capture, approach_indices=approach)
     return Coupling(coupler=coupler, inlets=dict(zip(jnames, inlets)),
                     backend=be, handle=handle, inp=inp, domain=domain)
