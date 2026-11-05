@@ -167,3 +167,102 @@ def test_couple_from_inp_logs_hydrographs(inp_path, tmp_path):
     paths = c.coupler.logger.write_csv(directory=str(tmp_path))
     assert len(paths) == 2                          # one per junction (J1, J2)
     c.close()
+
+
+def _flat_domain(anuga):
+    domain = anuga.rectangular_cross_domain(20, 10, len1=20.0, len2=10.0)
+    domain.set_quantity("elevation", 0.0)
+    domain.set_quantity("stage", 0.3)
+    Br = anuga.Reflective_boundary(domain)
+    domain.set_boundary({"left": Br, "right": Br, "top": Br, "bottom": Br})
+    return domain
+
+
+def test_couple_from_inp_coupled_junctions_subset_pipedream(inp_path):
+    # J2 is a sealed manhole: in the network but with no ANUGA inlet.
+    anuga = pytest.importorskip("anuga")
+    pytest.importorskip("pipedream_solver.hydraulics")
+    from anuga_drainage import couple_from_inp
+
+    domain = _flat_domain(anuga)
+    c = couple_from_inp(domain, inp_path, backend="pipedream", manhole_area=[0.5, 0.7],
+                        internal_links=4, coupled_junctions=["J1"])
+    assert list(c.inlets) == ["J1"]
+    assert list(c.backend.coupled) == [0]              # J1 only; J2 stays in the network
+    assert len(c.backend.get_heads()) == 1
+    assert c.inlets["J1"].inlet.get_area() >= 0.5       # J1's own manhole_area entry
+    c.close()
+
+
+def test_couple_from_inp_coupled_junctions_rejects_unknown_names(inp_path):
+    anuga = pytest.importorskip("anuga")
+    pytest.importorskip("pipedream_solver.hydraulics")
+    from anuga_drainage import couple_from_inp
+
+    with pytest.raises(ValueError, match="coupled_junctions"):
+        couple_from_inp(_flat_domain(anuga), inp_path, backend="pipedream",
+                        coupled_junctions=["J1", "nope"])
+
+
+_SWMM_OPTIONS = """\
+[OPTIONS]
+FLOW_UNITS     CMS
+FLOW_ROUTING   DYNWAVE
+START_DATE     01/01/2020
+START_TIME     00:00:00
+END_DATE       01/01/2020
+END_TIME       00:01:00
+ROUTING_STEP   1
+
+"""
+
+
+def test_couple_from_inp_coupled_junctions_subset_swmm(tmp_path):
+    # SWMM backend: only J1 is coupled, but pipe_volume must still count the
+    # water stored at the uncoupled J2, or R_pipe would depend on the subset.
+    anuga = pytest.importorskip("anuga")
+    pytest.importorskip("pyswmm")
+    from anuga_drainage import couple_from_inp
+
+    inp_path = tmp_path / "net_swmm.inp"
+    inp_path.write_text(_SWMM_OPTIONS + _INP)
+    c = couple_from_inp(_flat_domain(anuga), str(inp_path), backend="swmm",
+                        manhole_area=0.5, coupled_junctions=["J1"])
+    assert list(c.inlets) == ["J1"]
+    assert [n.nodeid for n in c.backend.junctions] == ["J1"]
+    assert sorted(n.nodeid for n in c.backend.storage_nodes) == ["J1", "J2"]
+    c.close()
+
+
+def test_couple_from_inp_approach_region_and_zero_velocity(inp_path):
+    # J1 is an on-grade inlet: it keeps its velocity and measures its approach
+    # flow over a 4 m strip; J2 keeps the default zeroed footprint and ring.
+    anuga = pytest.importorskip("anuga")
+    pytest.importorskip("pipedream_solver.hydraulics")
+    from anuga_drainage import couple_from_inp
+
+    domain = _flat_domain(anuga)
+    domain.set_quantity("xmomentum", 0.2)            # uniform h*u = 0.2 m^2/s
+    strip = [[13.0, 3.0], [17.0, 3.0], [17.0, 7.0], [13.0, 7.0]]
+    c = couple_from_inp(domain, inp_path, backend="pipedream", manhole_area=1.0,
+                        internal_links=4,
+                        inlet_capture={"J1": lambda d, q: 1.0, "J2": lambda d, q: 1.0},
+                        approach_regions={"J1": (strip, 4.0)},
+                        inlet_zero_velocity={"J1": False})
+    assert c.inlets["J1"].zero_velocity is False
+    assert c.inlets["J2"].zero_velocity is True
+    assert c.coupler.approach_widths == [4.0, None]
+    assert c.coupler.approach_flows()[0] == pytest.approx(0.2 * 4.0)
+    c.close()
+
+
+@pytest.mark.parametrize("kwarg", ["approach_regions", "inlet_zero_velocity"])
+def test_couple_from_inp_approach_options_reject_unknown_names(inp_path, kwarg):
+    anuga = pytest.importorskip("anuga")
+    pytest.importorskip("pipedream_solver.hydraulics")
+    from anuga_drainage import couple_from_inp
+
+    value = {"nope": ([[0, 0], [1, 0], [1, 1]], 1.0)} if kwarg == "approach_regions" \
+        else {"nope": False}
+    with pytest.raises(ValueError, match=kwarg):
+        couple_from_inp(_flat_domain(anuga), inp_path, backend="pipedream", **{kwarg: value})

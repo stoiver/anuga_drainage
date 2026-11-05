@@ -186,3 +186,25 @@ def test_baseline_is_taken_on_first_step_not_construction():
     dom.water_volume = -3555.0 + 7.0   # 7 m^3 added
     r = vb.step(1.0)
     assert r.R_anuga == pytest.approx(7.0, abs=1e-12)  # no inflow/inlets accounted -> shows as residual
+
+
+class _FakeRateOp:
+    """Mimics an ANUGA Rate_operator: no get_total_applied_volume, only the
+    running cumulative_influx."""
+    cumulative_influx = 0.0
+
+
+def test_rate_operator_inflow_is_counted_via_cumulative_influx():
+    # Rain on the grid (a Rate_operator) feeds the domain alongside an
+    # Inlet_operator source; both must count as inflow for ANUGA to close.
+    dom, inflow, inlet, be = _FakeDomain(), _FakeOp(), _FakeOp(), _FakeBackend()
+    rain = _FakeRateOp()
+    vb = VolumeBalance(dom, [inlet], be, inflow_operators=[inflow, rain])
+    vb.step(0.0)
+    inflow.applied = 10.0
+    rain.cumulative_influx = 5.0
+    dom.water_volume = 15.0
+    r = vb.step(1.0)
+    assert r.inflow == pytest.approx(15.0)
+    assert r.R_anuga == pytest.approx(0.0, abs=1e-12)
+    assert r.loss == pytest.approx(0.0, abs=1e-12)
