@@ -356,8 +356,7 @@ class Coupler:
 
         With an approach width W, this is the area-weighted mean of the
         specific-discharge magnitude h|u| over the approach triangles, times
-        W: the flow through a strip of that width, as TUFLOW-SWMM sums it
-        over an on-grade inlet's connected cells. Without one, it is the
+        W: the flow through a strip of that width. Without one, it is the
         magnitude of the area-averaged momentum over the approach triangles
         (or the inlet's own region) times sqrt(inlet area), the same
         surface-side heuristic as the standalone capture model."""

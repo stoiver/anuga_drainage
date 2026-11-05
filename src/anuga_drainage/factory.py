@@ -135,20 +135,17 @@ def couple_from_inp(domain, inp_path, backend="swmm", *,
         surface->pipe flow at its inlet capacity each step, where ``capture``
         is a callable ``capture(depth, approach_Q) -> m^3/s`` such as a
         :class:`~anuga_drainage.hec22.InletCapture` (SWMM/HEC-22 grate and
-        curb equations, as TUFLOW-SWMM uses). Junctions without an entry are
+        curb equations). Junctions without an entry are
         uncapped. Keys must be coupled junctions.
     approach_regions : optional ``{junction_name: (polygon, width)}`` for capped
         inlets: measure the approach flow over the triangles in ``polygon`` as
-        their area-weighted mean ``h|u|`` times the flow ``width`` [m], in the
-        way TUFLOW-SWMM sums the flow through an on-grade inlet's connected
-        cells. Without an entry, a capped inlet uses a ring just outside its
+        their area-weighted mean ``h|u|`` times the flow ``width`` [m]. Without an entry, a capped inlet uses a ring just outside its
         footprint (see ``Coupler.approach_flows``).
     inlet_zero_velocity : whether each inlet operator zeroes the velocity in
         its footprint; True (the default), False, or ``{junction_name: bool}``
         (missing names default to True). Zeroing keeps a sink stable. An
         on-grade inlet's footprint can keep its velocity (False), so that
-        flow passes over the inlet and can be measured there, as it does over
-        TUFLOW's SX cells.
+        flow passes over the inlet and can be measured there.
     log_hydrographs : if True, attach a :class:`~anuga_drainage.HydrographLogger`
         that records a per-inlet hydrograph each step; access it via
         ``coupling.coupler.logger`` and dump CSVs with ``logger.write_csv(dir)``.
