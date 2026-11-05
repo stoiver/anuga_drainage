@@ -1,7 +1,7 @@
 name: conda-env
 
 # Validates that environment.yml actually solves and works end to end: it
-# creates the conda env (ANUGA 3.3.6 from conda-forge + this package + both
+# creates the conda env (ANUGA 4.1.0 from conda-forge + this package + both
 # backends) and runs the FULL test suite, including the tests that need ANUGA
 # (which the fast `tests` workflow skips). Heavier than `tests`, so it only runs
 # on main/develop pushes and on PRs that touch the env or package.

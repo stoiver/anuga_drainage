@@ -25,6 +25,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    # ANUGA 4.1.0 requires pymetis, which has no Windows wheels and does not build
+    # there with pip. Fixed for ANUGA 4.1.1 by anuga-community/anuga_core#501: once
+    # 4.1.1 is on PyPI, pin it below and remove this line.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     defaults:
       run:
         shell: bash   # bash on every OS (Git Bash on Windows) for the heredoc
