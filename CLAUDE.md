@@ -22,7 +22,7 @@ pip install "pipedream-solver @ git+https://github.com/anuga-community/pipedream
 
 **pipedream comes from the anuga-community fork, branch `anuga`** (`pyproject.toml`'s `pipedream` extra and `environment.yml` both point there). Upstream `mdbartos/pipedream` has had no commit since May 2024 and neither its PyPI release (0.2.2) nor its master works with a current numpy/pandas: 0.2.2 uses `np.bool8` (removed in numpy 2.x) and master's `SuperLink(...)` construction crashes under pandas 3's Copy-on-Write, because it hands read-only `.values` arrays to numba kernels compiled with eager, writable-only signatures. The fork's `anuga` branch is upstream master plus the two fixes (`np.bool_`; writable copies of the DataFrame-derived arrays). Both are also open upstream (mdbartos/pipedream#73, #74); if they are ever merged and released, point the extra back at upstream. There is no longer a `pandas<3` pin.
 
-Do **not** `pip install anuga` into the conda env — ANUGA is provided by the env, not installed from `requirements.txt`. For a from-scratch setup, `environment.yml` builds a conda env with ANUGA 3.3.6 from conda-forge (Python 3.12) plus this package and both backends (`conda env create -f environment.yml`). The maintainer's dev box instead runs ANUGA from source (3.3.6.dev) on Python 3.14, which conda-forge ANUGA does not yet build for.
+Do **not** `pip install anuga` into the conda env — ANUGA is provided by the env, not installed from `requirements.txt`. For a from-scratch setup, `environment.yml` builds a conda env with ANUGA 4.1.0 from conda-forge (Python 3.12) plus this package and both backends (`conda env create -f environment.yml`). The maintainer's dev box instead runs ANUGA from source (3.3.6.dev) on Python 3.14, which conda-forge ANUGA does not yet build for.
 
 The package's own logic is tested under `tests/` (pytest). Note the `test_*.py` files under `examples/` are unrelated — they are standalone runnable scripts, not part of the pytest suite.
 
@@ -37,9 +37,10 @@ macOS distribution is split and asymmetric, which is why it needs its own lane:
 - **PyPI** ANUGA wheels are `macosx_*_arm64` (Apple Silicon) **only** — no Intel macOS wheel. So Apple Silicon is covered by `pip install anuga`. (Through 3.3.6 these wheels were not self-contained — the macOS arm64 wheel needed `libomp` and the Windows wheel had unbundled DLLs; ANUGA 3.3.7 fixed this by running `repairwheel` on all platforms, so plain `pip install anuga` now works.) Note `macos-latest` being arm64 means the `pip` lane already tests ANUGA on Apple Silicon (via the arm64 wheel).
 
 ### Pending CI follow-ups
-- **Done:** `environment.yml` pins conda-forge `anuga=3.3.7` (published 2026-06-07).
+- **Done:** `environment.yml` and `pip.yml` pin `anuga` 4.1.0: 3.3.7 imports `six` without declaring it.
+- `pip (windows-latest)` may fail until ANUGA 4.1.1 is on PyPI: 4.1.0 requires pymetis, which has no Windows wheels (anuga-community/anuga_core#501). Then pin 4.1.1 in `pip.yml` and remove its `continue-on-error`.
 - Once conda-forge ships **osx-arm64** (feedstock#17, native build), add a **`macos-latest` (arm64) lane to `conda-env.yml`** — `macos-latest` is arm64, so this tests the conda arm64 package natively. (Less critical than it was: the native feedstock build already runs the test suite on arm64.)
-- **Done:** dropped the Windows `continue-on-error` in `pip.yml` — meshpy **2026.1** (2026-06-09) ships a self-contained Windows wheel (cibuildwheel 4.0 auto-delvewheel; `inducer/meshpy#150` fixed, PR #151 closed redundant), so the pip lane now requires Windows too.
+- **Done:** meshpy's Windows wheel no longer needs `continue-on-error` in `pip.yml` — meshpy **2026.1** (2026-06-09) ships a self-contained Windows wheel (cibuildwheel 4.0 auto-delvewheel; `inducer/meshpy#150` fixed, PR #151 closed redundant).
 
 ### Project decision: standard pyswmm + our own `calculate_Q`
 We target the **standard pyswmm release** (currently 2.1.0 from PyPI) and compute the 2D↔1D exchange flux ourselves in Python via `anuga_drainage.calculate_Q`. We do **not** use the patched pyswmm fork (the `2D-coupling` branch with `node.create_opening(...)` / `sim.coupling_step(...)` used by `archive/pyswmm_with_openings/`); that API does not exist in the standard release. Treat `archive/pyswmm_with_openings/` as legacy/reference, not the active path.

@@ -12,7 +12,7 @@ inlets/manholes every timestep using weir/orifice equations.
 
 ## Installation
 
-The quickest path is the bundled conda environment (ANUGA 3.3.6 from
+The quickest path is the bundled conda environment (ANUGA 4.1.0 from
 conda-forge + this package + both backends), created from the repo root:
 
 ```bash
