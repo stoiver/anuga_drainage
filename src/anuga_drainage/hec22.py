@@ -1,8 +1,7 @@
 """Street-inlet capture capacity from the HEC-22 equations, as implemented in SWMM 5.2.
 
 A port of EPA SWMM 5.2's ``inlet.c`` (on-sag and on-grade grate, curb-opening
-and combination inlets), which TUFLOW-SWMM also uses for its pit inlets. In
-the coupling it supplies a per-inlet **capture limit**: ``calculate_Q`` still
+and combination inlets). In the coupling it supplies a per-inlet **capture limit**: ``calculate_Q`` still
 sets the head-driven 2D<->1D exchange, but the flow an inlet can take off the
 surface is capped at its HEC-22 capacity (see ``Coupler(capture=...)``).
 
@@ -343,8 +342,8 @@ class InletCapture:
     [m^3/s] — the form ``Coupler(capture=...)`` calls each step.
 
     ``placement`` is ``ON_SAG`` (depth-driven) or ``ON_GRADE`` (approach-flow
-    driven; needs ``long_slope``). ``AUTOMATIC`` takes the larger of the two,
-    as TUFLOW-SWMM does. ``clogged_pct`` and ``q_max`` follow SWMM's
+    driven; needs ``long_slope``). ``AUTOMATIC`` takes the larger of the two.
+    ``clogged_pct`` and ``q_max`` follow SWMM's
     [INLET_USAGE] fields; ``q_max`` of 0/None means no limit."""
 
     def __init__(self, design, street, placement="ON_SAG", long_slope=None,

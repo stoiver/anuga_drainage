@@ -12,8 +12,8 @@ from anuga_drainage.hec22 import (
     sag_capture, on_grade_capture, read_inlet_designs,
 )
 
-# The TUFLOW-SWMM tutorial's Combo1 inlet and Xsec1 street.
-COMBO = InletDesign("Combo1", grate=Grate(0.6, 0.3, "P_BAR-50"),
+# A combination inlet and a street to test them with.
+COMBO = InletDesign("Combo", grate=Grate(0.6, 0.3, "P_BAR-50"),
                     curb=Curb(0.9, 0.15, "VERTICAL"))
 GRATE_ONLY = InletDesign("G", grate=Grate(0.6, 0.3, "P_BAR-50"))
 STREET = Street(cross_slope=0.04, roughness=0.014, crown_width=7.0)
@@ -98,15 +98,15 @@ def test_read_inlet_designs(tmp_path):
     p.write_text("""\
 [STREETS]
 ;;Name  Tcrown  Hcurb  Sx   nRoad  a    W    Sides  Tback  Sback  nBack
-Xsec1   7.0     0.2    4.0  0.014  0.0  0.0  1      5.0    2.0    0.016
+Xsec   7.0     0.2    4.0  0.014  0.0  0.0  1      5.0    2.0    0.016
 
 [INLETS]
 ;;Name  Type   Param1  Param2  Param3
-Combo1  GRATE  0.6     0.3     P_BAR-50
-Combo1  CURB   0.9     0.15    VERTICAL
+Combo  GRATE  0.6     0.3     P_BAR-50
+Combo  CURB   0.9     0.15    VERTICAL
 Drop1   GRATE  1.0     1.0     GENERIC  0.5  2.0
 """)
     designs, streets = read_inlet_designs(str(p))
-    assert designs["Combo1"] == COMBO
+    assert designs["Combo"] == COMBO
     assert designs["Drop1"].grate == Grate(1.0, 1.0, "GENERIC", 0.5, 2.0)
-    assert streets["Xsec1"] == STREET
+    assert streets["Xsec"] == STREET
