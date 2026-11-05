@@ -38,7 +38,7 @@ jobs:
       - name: Install ANUGA (PyPI wheel) + package and backends
         run: |
           python -m pip install --upgrade pip
-          pip install anuga==3.3.7
+          pip install anuga==4.1.0
           pip install -e .[swmm,pipedream,test]
 
       - name: Show key versions

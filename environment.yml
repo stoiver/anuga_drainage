@@ -3,11 +3,11 @@
 #   conda env create -f environment.yml
 #   conda activate anuga_drainage
 #
-# This installs ANUGA 3.3.6 from conda-forge plus this package and both 1D
+# This installs ANUGA 4.1.0 from conda-forge plus this package and both 1D
 # backends. Notes:
-#   * conda-forge ships ANUGA for Python 3.10-3.13 (not 3.14 yet), so this file
+#   * conda-forge ships ANUGA 4.1.0 for Python 3.11-3.14, and this file
 #     targets 3.12 for a one-command install of the released ANUGA. The
-#     maintainer's dev box instead runs ANUGA built from source (3.3.6.dev) on
+#     maintainer's dev box instead runs ANUGA built from source on
 #     Python 3.14 — see CLAUDE.md.
 #   * The 1D backends and this package come via pip from the project's extras
 #     (see pyproject.toml). pipedream-solver comes from the anuga-community
@@ -20,7 +20,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.12
-  - anuga=3.3.7
+  - anuga=4.1.0
   - pandas
   - matplotlib
   - pip
